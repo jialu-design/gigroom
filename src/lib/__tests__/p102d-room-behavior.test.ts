@@ -13,10 +13,34 @@
  * I. database.types.ts 覆盖
  * J. Profile 页面不直接 import mock
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { useUserStore } from "@/lib/stores/useUserStore";
+
+// 固定"当前时间"：show-12 是测试锚定的未来演出（2026-09-20T20:00+08:00）。
+// 仅替换全局 Date 时钟（不用 vi.useFakeTimers，避免影响 Promise/timer 行为），
+// 使测试不随真实日期滚动而失效
+const RealDate = Date;
+const FIXED_NOW = new RealDate("2026-09-18T12:00:00+08:00").getTime();
+class FixedDate extends RealDate {
+  constructor(...args: unknown[]) {
+    if (args.length === 0) {
+      super(FIXED_NOW);
+    } else {
+      super(...(args as unknown as ConstructorParameters<typeof RealDate>));
+    }
+  }
+  static now(): number {
+    return FIXED_NOW;
+  }
+}
+beforeEach(() => {
+  (globalThis as { Date: unknown }).Date = FixedDate;
+});
+afterEach(() => {
+  (globalThis as { Date: unknown }).Date = RealDate;
+});
 
 // ============
 // helpers

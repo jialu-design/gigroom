@@ -16,6 +16,30 @@ import { resolve } from "path";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import { RoomStatus, ShowStatus } from "@/lib/types";
 
+// 固定"当前时间"：show-12 是测试锚定的未来演出（2026-09-20T20:00+08:00）。
+// 仅替换全局 Date 时钟（不用 vi.useFakeTimers，避免影响 Promise/timer 行为），
+// 使测试不随真实日期滚动而失效
+const RealDate = Date;
+const FIXED_NOW = new RealDate("2026-09-18T12:00:00+08:00").getTime();
+class FixedDate extends RealDate {
+  constructor(...args: unknown[]) {
+    if (args.length === 0) {
+      super(FIXED_NOW);
+    } else {
+      super(...(args as unknown as ConstructorParameters<typeof RealDate>));
+    }
+  }
+  static now(): number {
+    return FIXED_NOW;
+  }
+}
+beforeEach(() => {
+  (globalThis as { Date: unknown }).Date = FixedDate;
+});
+afterEach(() => {
+  (globalThis as { Date: unknown }).Date = RealDate;
+});
+
 const SRC = resolve(__dirname, "../../..", "src");
 
 function read(relPath: string): string {

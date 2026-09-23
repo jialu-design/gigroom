@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:restart": "sh scripts/dev-restart.sh",
+    "prebuild": "node scripts/guard-prebuild.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

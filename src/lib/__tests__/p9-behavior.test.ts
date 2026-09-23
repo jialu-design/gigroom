@@ -11,7 +11,7 @@
  * G. persist（已读状态 + attended 回答结果 持久化）
  * H. Notification UI Store（EditProfileModal 与 Notification 共存的 UI state）
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import { useUIStore } from "@/lib/stores/useUIStore";
 import { NotificationType, UserShowStatus } from "@/lib/types";
@@ -27,6 +27,30 @@ import {
 import { showMap } from "@/mocks/shows";
 import { mockShowRooms } from "@/mocks/shows";
 import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+
+// 固定"当前时间"：show-12 是测试锚定的未来演出（2026-09-20T20:00+08:00）。
+// 仅替换全局 Date 时钟（不用 vi.useFakeTimers，避免影响 Promise/timer 行为），
+// 使测试不随真实日期滚动而失效
+const RealDate = Date;
+const FIXED_NOW = new RealDate("2026-09-18T12:00:00+08:00").getTime();
+class FixedDate extends RealDate {
+  constructor(...args: unknown[]) {
+    if (args.length === 0) {
+      super(FIXED_NOW);
+    } else {
+      super(...(args as unknown as ConstructorParameters<typeof RealDate>));
+    }
+  }
+  static now(): number {
+    return FIXED_NOW;
+  }
+}
+beforeEach(() => {
+  (globalThis as { Date: unknown }).Date = FixedDate;
+});
+afterEach(() => {
+  (globalThis as { Date: unknown }).Date = RealDate;
+});
 
 beforeEach(() => {
   useUserStore.getState().logout();
