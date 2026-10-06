@@ -8,9 +8,9 @@ import {
   formatShowDate,
   getTicketStatusLabel,
   getTicketStatusBadgeVariant,
-  isShowInactive,
   getShowPosterFallback,
 } from "@/lib/utils/format";
+import { getEffectiveShowState } from "@/lib/utils/showState";
 
 interface ShowCardCompactProps {
   show: Show;
@@ -26,8 +26,11 @@ export function ShowCardCompact({ show, className }: ShowCardCompactProps) {
     (a) => a.role === ArtistRole.HEADLINER
   );
   const displayName = headliner?.artist?.name ?? show.title ?? "未命名演出";
-  const inactive = isShowInactive(show.status);
-  const ticketLabel = getTicketStatusLabel(show.ticket_status);
+  // 我的演出中含已结束（去过）：统一状态口径，已结束展示演出状态而非票务标签
+  const state = getEffectiveShowState(show);
+  const ticketLabel = state.showTicketBadge
+    ? getTicketStatusLabel(show.ticket_status)
+    : "";
   const ticketVariant = getTicketStatusBadgeVariant(show.ticket_status);
 
   return (
@@ -45,7 +48,7 @@ export function ShowCardCompact({ show, className }: ShowCardCompactProps) {
           alt={displayName}
           fill
           sizes="60px"
-          className={cn("object-cover", inactive && "opacity-50 grayscale")}
+          className={cn("object-cover", state.isInactive && "opacity-50 grayscale")}
         />
       </div>
 
@@ -58,9 +61,15 @@ export function ShowCardCompact({ show, className }: ShowCardCompactProps) {
           {formatShowDate(show.date_time)} · {show.city}
         </p>
         <div className="mt-1 flex items-center gap-1.5">
-          {ticketLabel && (
-            <Badge variant={ticketVariant} size="sm">
-              {ticketLabel}
+          {state.bucket === "upcoming" ? (
+            ticketLabel && (
+              <Badge variant={ticketVariant} size="sm">
+                {ticketLabel}
+              </Badge>
+            )
+          ) : (
+            <Badge variant={state.badgeVariant} size="sm">
+              {state.label}
             </Badge>
           )}
           {show.is_demo && (

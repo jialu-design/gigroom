@@ -2,18 +2,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users } from "lucide-react";
 import type { Show } from "@/lib/types";
-import { ArtistRole, ShowStatus } from "@/lib/types";
+import { ArtistRole } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 import {
   formatShowDateTime,
   getTicketStatusLabel,
   getTicketStatusBadgeVariant,
-  getShowStatusLabel,
-  getShowStatusBadgeVariant,
-  isShowInactive,
   getShowPosterFallback,
 } from "@/lib/utils/format";
+import { getEffectiveShowState } from "@/lib/utils/showState";
 
 interface ShowCardHomeProps {
   show: Show;
@@ -31,9 +29,12 @@ export function ShowCardHome({ show, className }: ShowCardHomeProps) {
   const displayName = headliner?.artist?.name ?? show.title ?? "未命名演出";
   const venueName = show.venue?.name ?? "";
 
-  const ticketLabel = getTicketStatusLabel(show.ticket_status);
+  // 首页数据虽已按 upcoming 预过滤，状态口径仍与全站统一（防滞后数据串入）
+  const state = getEffectiveShowState(show);
+  const ticketLabel = state.showTicketBadge
+    ? getTicketStatusLabel(show.ticket_status)
+    : "";
   const ticketVariant = getTicketStatusBadgeVariant(show.ticket_status);
-  const inactive = isShowInactive(show.status);
 
   const monthShort = formatMonthShort(show.date_time);
   const day = formatDay(show.date_time);
@@ -53,11 +54,11 @@ export function ShowCardHome({ show, className }: ShowCardHomeProps) {
           sizes="(max-width: 768px) 46vw, (max-width: 1024px) 30vw, 23vw"
           className={cn(
             "object-cover transition-transform duration-500 group-hover:scale-[1.03]",
-            inactive && "opacity-60 grayscale"
+            state.isInactive && "opacity-60 grayscale"
           )}
         />
 
-        {/* 票务状态 badge */}
+        {/* 票务状态 badge（仅 upcoming） */}
         {ticketLabel && (
           <span className="absolute top-3 left-3">
             <Badge variant={ticketVariant} size="sm">
@@ -66,14 +67,11 @@ export function ShowCardHome({ show, className }: ShowCardHomeProps) {
           </span>
         )}
 
-        {/* 非 UPCOMING 状态 badge（已结束/已取消/已延期） */}
-        {show.status !== ShowStatus.UPCOMING && (
+        {/* 非 upcoming 状态 badge（已结束/已取消/已延期） */}
+        {state.bucket !== "upcoming" && (
           <span className="absolute top-3 right-3">
-            <Badge
-              variant={getShowStatusBadgeVariant(show.status)}
-              size="sm"
-            >
-              {getShowStatusLabel(show.status)}
+            <Badge variant={state.badgeVariant} size="sm">
+              {state.label}
             </Badge>
           </span>
         )}

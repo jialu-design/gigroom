@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { Search, X } from "lucide-react";
-import { getArtists } from "@/lib/api/artists";
-import { GENRES } from "@/lib/constants";
+import { getArtists, getAvailableGenres } from "@/lib/api/artists";
 import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ArtistCard } from "@/components/artist/ArtistCard";
 import { cn } from "@/lib/utils";
+import { getGenreLabel } from "@/lib/constants";
 import type { Artist } from "@/lib/types";
 
 export default function ArtistsPage() {
@@ -14,14 +15,20 @@ export default function ArtistsPage() {
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
+  // P1-5: 有效 genre 标签从 Canonical Artist Registry 派生（有数据的 tag 才显示）
+  const [availableGenres, setAvailableGenres] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const res = await getArtists({ limit: 100 });
+      const [res, genres] = await Promise.all([
+        getArtists({ limit: 100 }),
+        getAvailableGenres(),
+      ]);
       if (cancelled) return;
       setArtists(res.data);
+      setAvailableGenres(genres);
       setLoading(false);
     }
     load();
@@ -89,7 +96,7 @@ export default function ArtistsPage() {
 
       {/* Genre Filter */}
       <div className="mb-8 flex flex-wrap items-center gap-2">
-        {GENRES.map((g) => {
+        {availableGenres.map((g) => {
           const active = selectedGenres.includes(g);
           return (
             <button
@@ -103,7 +110,7 @@ export default function ArtistsPage() {
                   : "border-border bg-bg-tertiary text-text-secondary hover:border-border-light hover:text-text-primary"
               )}
             >
-              {g}
+              {getGenreLabel(g)}
             </button>
           );
         })}
@@ -130,21 +137,15 @@ export default function ArtistsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border p-12 text-center">
-          <p className="text-text-secondary text-body mb-2">
-            没有找到符合条件的乐队
-          </p>
-          <p className="text-text-tertiary text-sm mb-4">
-            试试换个关键词或清除筛选。
-          </p>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-sm text-accent-lime hover:text-accent-lime-hover"
-          >
-            清除筛选
-          </button>
-        </div>
+        <EmptyState
+          title="没有找到符合条件的乐队"
+          description="试试换个关键词或清除筛选。"
+          action={{
+            label: "清除筛选",
+            variant: "ghost",
+            onClick: clearFilters,
+          }}
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
           {filtered.map((artist) => (

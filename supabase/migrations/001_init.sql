@@ -250,27 +250,7 @@ CREATE TRIGGER set_updated_at_user_show_statuses
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ========================
--- 10. announcements
--- ========================
-CREATE TABLE public.announcements (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  show_id uuid NOT NULL REFERENCES public.shows(id) ON DELETE CASCADE,
-  type text NOT NULL CHECK (type IN (
-    'ticket_sale', 'sold_out', 'extra_show', 'venue_change',
-    'time_change', 'postponed', 'cancelled', 'guest_change', 'organizer_notice'
-  )),
-  title text NOT NULL,
-  content text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "announcements_public_read" ON public.announcements
-  FOR SELECT TO anon, authenticated USING (true);
-
--- ========================
--- 11. discussion_messages
+-- 10. discussion_messages
 -- ========================
 CREATE TABLE public.discussion_messages (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -505,10 +485,13 @@ CREATE POLICY "live_posts_delete_author" ON public.live_posts
 CREATE TABLE public.notifications (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  type text NOT NULL CHECK (type IN ('new_show', 'announcement', 'attended_check')),
+  type text NOT NULL CHECK (type IN ('new_show', 'attended_check', 'discussion_reply', 'buddy_reply', 'buddy_interaction', 'ticket_favorite', 'ticket_message', 'live_interaction')),
   title text NOT NULL,
   related_show_id uuid REFERENCES public.shows(id) ON DELETE CASCADE,
-  related_announcement_id uuid REFERENCES public.announcements(id) ON DELETE CASCADE,
+  related_content_id text,
+  from_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  target_url text,
+  is_content_deleted boolean NOT NULL DEFAULT false,
   is_read boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -536,11 +519,6 @@ CREATE UNIQUE INDEX notifications_new_show_unique
 CREATE UNIQUE INDEX notifications_attended_check_unique
   ON public.notifications (user_id, related_show_id)
   WHERE type = 'attended_check' AND related_show_id IS NOT NULL;
-
--- announcement: 同一用户 + 同一 announcement 不重复
-CREATE UNIQUE INDEX notifications_announcement_unique
-  ON public.notifications (user_id, related_announcement_id)
-  WHERE type = 'announcement' AND related_announcement_id IS NOT NULL;
 
 -- ========================
 -- 18. reports
@@ -632,9 +610,6 @@ CREATE INDEX idx_live_posts_show_created ON public.live_posts (show_id, created_
 -- notifications
 CREATE INDEX idx_notifications_user_created ON public.notifications (user_id, created_at);
 CREATE INDEX idx_notifications_user_unread ON public.notifications (user_id, is_read);
-
--- announcements
-CREATE INDEX idx_announcements_show_id ON public.announcements (show_id);
 
 -- reports
 CREATE INDEX idx_reports_reporter_id ON public.reports (reporter_id);

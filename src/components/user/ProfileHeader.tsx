@@ -95,7 +95,7 @@ export function ProfileHeader({ user, followedCount, attendedCount }: ProfileHea
                 {attendedCount}
               </div>
               <div className="text-xs text-text-tertiary mt-0.5">
-                去过的现场
+                去过的演出
               </div>
             </div>
           </div>

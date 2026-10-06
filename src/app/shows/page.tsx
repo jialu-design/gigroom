@@ -2,16 +2,18 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { getShows } from "@/lib/api/shows";
+import { getAvailableGenres } from "@/lib/api/artists";
 import { useCityStore } from "@/lib/stores/useCityStore";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import { TabBar } from "@/components/ui/TabBar";
 import { Select } from "@/components/ui/Select";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ShowListCard } from "@/components/show/ShowListCard";
-import { CITIES, GENRES } from "@/lib/constants";
+import { CITIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { ShowStatus, type Show } from "@/lib/types";
+import { type Show } from "@/lib/types";
 import { getMonthKey, getMonthLabel } from "@/lib/utils/format";
-import { getShowLifecycle, isShowDatePassed } from "@/lib/utils/showLifecycle";
+import { classifyShows } from "@/lib/utils/showState";
 
 type TabKey = "all" | "following";
 
@@ -27,6 +29,18 @@ export default function ShowsPage() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
+  // P1-5: 有效 genre 标签从 Canonical Artist Registry 派生
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAvailableGenres().then((genres) => {
+      if (!cancelled) setAvailableGenres(genres);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 日期范围计算
   const dateRange = useMemo(() => {
@@ -114,48 +128,38 @@ export default function ShowsPage() {
     return result;
   }, [shows, selectedGenres, tab, followedArtistIds]);
 
-  // 即将上演 / 已结束分组（日期驱动：status 滞后但日期已过的演出归入历史；
-  // 已取消演出一律不进"即将上演"）
-  const { upcomingShows, pastShows } = useMemo(() => {
-    const upcoming: Show[] = [];
-    const past: Show[] = [];
-    filteredShows.forEach((show) => {
-      const cancelled = show.status === ShowStatus.CANCELLED;
-      const deadPostponed =
-        show.status === ShowStatus.POSTPONED && isShowDatePassed(show);
-      if (getShowLifecycle(show).hasEnded || cancelled || deadPostponed) {
-        past.push(show);
-      } else {
-        upcoming.push(show);
-      }
-    });
-    // 即将上演按日期升序（最近优先），已结束按日期倒序（最近结束在前）
-    upcoming.sort((a, b) => a.date_time.localeCompare(b.date_time));
-    past.sort((a, b) => b.date_time.localeCompare(a.date_time));
-    return { upcomingShows: upcoming, pastShows: past };
-  }, [filteredShows]);
+  // 四态严格互斥分组（唯一口径：showState.classifyShows）
+  // upcoming 升序；ended / postponed / cancelled 倒序
+  const classified = useMemo(
+    () => classifyShows(filteredShows),
+    [filteredShows]
+  );
+  const inactiveShows = useMemo(
+    () => [...classified.postponed, ...classified.cancelled],
+    [classified]
+  );
 
   // 即将上演按月份分组
   const groupedShows = useMemo(() => {
     const groups: Record<string, Show[]> = {};
-    upcomingShows.forEach((show) => {
+    classified.upcoming.forEach((show) => {
       const key = getMonthKey(show.date_time);
       if (!groups[key]) groups[key] = [];
       groups[key].push(show);
     });
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [upcomingShows]);
+  }, [classified.upcoming]);
 
   // 已结束按月份分组（倒序）
   const groupedPastShows = useMemo(() => {
     const groups: Record<string, Show[]> = {};
-    pastShows.forEach((show) => {
+    classified.ended.forEach((show) => {
       const key = getMonthKey(show.date_time);
       if (!groups[key]) groups[key] = [];
       groups[key].push(show);
     });
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [pastShows]);
+  }, [classified.ended]);
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
@@ -218,7 +222,7 @@ export default function ShowsPage() {
 
         {/* 风格多选 */}
         <div className="flex flex-wrap gap-2">
-          {GENRES.map((genre) => (
+          {availableGenres.map((genre) => (
             <button
               key={genre}
               onClick={() => toggleGenre(genre)}
@@ -246,17 +250,15 @@ export default function ShowsPage() {
           ))}
         </div>
       ) : tab === "following" && !isLoggedIn ? (
-        <div className="rounded-md border border-dashed border-border p-12 text-center">
-          <p className="text-text-tertiary text-sm">
-            登录后可以查看你关注乐队的演出
-          </p>
-        </div>
-      ) : groupedShows.length > 0 || groupedPastShows.length > 0 ? (
+        <EmptyState title="登录后可以查看你关注乐队的演出" />
+      ) : groupedShows.length > 0 ||
+        groupedPastShows.length > 0 ||
+        inactiveShows.length > 0 ? (
         <div className="space-y-10">
           {/* 即将上演（按月份升序） */}
           {groupedShows.length > 0 && (
             <div className="space-y-8">
-              <h2 className="text-xl font-bold text-text-primary tracking-tight">
+              <h2 className="text-h3 text-text-primary">
                 即将上演
               </h2>
               {groupedShows.map(([monthKey, monthShows]) => (
@@ -274,10 +276,10 @@ export default function ShowsPage() {
             </div>
           )}
 
-          {/* 已结束 / 历史（按月份倒序） */}
+          {/* 已结束 / 历史（按月份倒序；不含取消/延期） */}
           {groupedPastShows.length > 0 && (
             <div className="space-y-8">
-              <h2 className="text-xl font-bold text-text-primary tracking-tight">
+              <h2 className="text-h3 text-text-primary">
                 已结束
               </h2>
               {groupedPastShows.map(([monthKey, monthShows]) => (
@@ -294,15 +296,29 @@ export default function ShowsPage() {
               ))}
             </div>
           )}
+
+          {/* 取消 / 延期（独立分组，禁止与"已结束"混排造成文案矛盾） */}
+          {inactiveShows.length > 0 && (
+            <div className="space-y-8">
+              <h2 className="text-h3 text-text-primary">
+                取消 / 延期
+              </h2>
+              <div>
+                {inactiveShows.map((show) => (
+                  <ShowListCard key={show.id} show={show} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="rounded-md border border-dashed border-border p-12 text-center">
-          <p className="text-text-tertiary text-sm">
-            {tab === "following"
+        <EmptyState
+          title={
+            tab === "following"
               ? "你关注的乐队暂时没有演出安排"
-              : "没有符合条件的演出，试试调整筛选条件"}
-          </p>
-        </div>
+              : "没有符合条件的演出，试试调整筛选条件"
+          }
+        />
       )}
     </main>
   );

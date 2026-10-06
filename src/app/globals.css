@@ -36,6 +36,8 @@ html,
 body {
   padding: 0;
   margin: 0;
+  /* 滚动条占位稳定：避免切换页面/Tab 时内容区宽度跳动 */
+  scrollbar-gutter: stable;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -150,6 +152,44 @@ p {
 
   .container-gigroom {
     @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ===== Typography hierarchy（P1-7）=====
+   * 标题：text-h1/h2/h3（36/28/22px, 700/700/600）
+   * 正文：text-body / text-sm
+   * metadata：text-metadata（12px tertiary）
+   * 数字日期：num-date（condensed + bold + tabular，可叠 text-4xl 等控制字号）
+   * 眉题：eyebrow（condensed 小号 lime 大写字距）
+   */
+  .eyebrow {
+    @apply font-condensed text-xs tracking-[0.25em] text-accent-lime uppercase mb-2;
+  }
+
+  .num-date {
+    @apply font-condensed font-bold tabular-nums tracking-tight;
+  }
+
+  .text-metadata {
+    @apply text-xs text-text-tertiary;
+  }
+
+  /* P1-8: deep link 落点短暂高亮（~2s） */
+  .content-flash {
+    animation: content-flash 2s ease-out 1;
+  }
+
+  @keyframes content-flash {
+    0%,
+    40% {
+      box-shadow:
+        inset 0 0 0 1px rgba(183, 243, 74, 0.9),
+        inset 0 0 24px rgba(183, 243, 74, 0.12);
+      background-color: rgba(183, 243, 74, 0.06);
+    }
+    100% {
+      box-shadow: none;
+      background-color: transparent;
+    }
   }
 
   .poster-border {

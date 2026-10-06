@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import type { Artist } from "@/lib/types";
 import { Tag } from "@/components/ui/Badge";
+import { getGenreLabel } from "@/lib/constants";
 import { FollowButton } from "./FollowButton";
 
 interface ArtistHeaderProps {
@@ -21,6 +23,15 @@ export function ArtistHeader({ artist }: ArtistHeaderProps) {
 
   return (
     <header>
+      {/* 返回（历史只能右滑返回，补上显式入口） */}
+      <Link
+        href="/artists"
+        className="inline-flex items-center gap-1.5 mb-4 text-sm text-text-tertiary hover:text-text-primary transition-colors"
+      >
+        <ArrowLeft size={15} />
+        返回艺人列表
+      </Link>
+
       {/* 大幅封面 */}
       <div className="relative w-full h-[240px] sm:h-[300px] md:h-[380px] rounded-md overflow-hidden bg-bg-secondary poster-border">
         {artist.cover_url ? (
@@ -58,7 +69,7 @@ export function ArtistHeader({ artist }: ArtistHeaderProps) {
         <div className="mt-3 flex flex-wrap gap-1.5">
           {artist.genres.map((g) => (
             <Tag key={g} size="md">
-              {g}
+              {getGenreLabel(g)}
             </Tag>
           ))}
         </div>
@@ -66,7 +77,7 @@ export function ArtistHeader({ artist }: ArtistHeaderProps) {
 
       {/* Bio */}
       {artist.bio && (
-        <p className="mt-5 text-text-secondary text-body leading-relaxed max-w-[700px]">
+        <p className="mt-5 text-text-secondary text-body leading-relaxed max-w-2xl">
           {artist.bio}
         </p>
       )}

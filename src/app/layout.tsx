@@ -19,9 +19,9 @@ const barlowCondensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "GigRoom / 声场 — 独立音乐演出发现社区",
+  title: "GIGROOM — 独立音乐演出发现社区",
   description:
-    "GigRoom（声场）是面向中国独立音乐爱好者的演出发现与场次社区平台，发现演出、找同好、加入观演小屋。",
+    "GIGROOM 是面向中国独立音乐爱好者的演出发现与场次社区平台，发现演出、找同好、加入观演小屋。",
 };
 
 export default function RootLayout({

@@ -15,11 +15,12 @@ import {
   updateTicketPostStatus,
   deleteTicketPost,
 } from "@/lib/api/posts/ticketPosts";
-import type { TicketPost, TicketPostType } from "@/lib/types";
+import type { TicketPost, TicketPostType, TicketConversation } from "@/lib/types";
 import { TicketPostStatus, TicketPostType as TPT } from "@/lib/types";
 import { TicketRuleNotice } from "./TicketRuleNotice";
 import { TicketPostCard } from "./TicketPostCard";
 import { TicketPostModal } from "./TicketPostModal";
+import { TicketChatModal } from "./TicketChatModal";
 import { PostReplies } from "./PostReplies";
 import { getTicketPostComments, replyTicketPost } from "@/lib/api/posts/ticketPosts";
 import type { TicketPostComment } from "@/lib/types";
@@ -32,11 +33,13 @@ interface TicketTabProps {
   createLocked?: boolean;
   /** 讨论宽限期结束：禁止回复 */
   replyLocked?: boolean;
+  /** 该 Show 的最高已知票价（max(price_presale, price_door)），无则 undefined，用于锁票面价 */
+  maxKnownPrice?: number;
 }
 
 type SubTab = "all" | TPT;
 
-export function TicketTab({ showId, roomId, isMember, createLocked = false, replyLocked = false }: TicketTabProps) {
+export function TicketTab({ showId, roomId, isMember, createLocked = false, replyLocked = false, maxKnownPrice }: TicketTabProps) {
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const user = useUserStore((s) => s.user);
   const requireRoomMembership = useRequireRoomMembership();
@@ -51,6 +54,7 @@ export function TicketTab({ showId, roomId, isMember, createLocked = false, repl
   const [reportOpen, setReportOpen] = React.useState(false);
   const [expandedPost, setExpandedPost] = React.useState<string | null>(null);
   const [commentsMap, setCommentsMap] = React.useState<Record<string, TicketPostComment[]>>({});
+  const [chatConversation, setChatConversation] = React.useState<TicketConversation | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -100,6 +104,26 @@ export function TicketTab({ showId, roomId, isMember, createLocked = false, repl
             )
           );
           showToast("已标记完成", "success");
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : "操作失败", "error");
+        }
+      })();
+    });
+  };
+
+  const handleReopen = (post: TicketPost) => {
+    // P1-9：撤销"已出/已收到"标记 → 回到进行中（同样仅作者可见）
+    requireRoomMembership(roomId ?? "", () => {
+      if (!user) return;
+      void (async () => {
+        try {
+          await updateTicketPostStatus(post.id, user.id, TicketPostStatus.ACTIVE);
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === post.id ? { ...p, status: TicketPostStatus.ACTIVE } : p
+            )
+          );
+          showToast("已撤销标记，帖子恢复进行中", "success");
         } catch (err) {
           showToast(err instanceof Error ? err.message : "操作失败", "error");
         }
@@ -216,24 +240,28 @@ export function TicketTab({ showId, roomId, isMember, createLocked = false, repl
       ) : (
         <div className="space-y-3">
           {posts.map((post) => (
-            <TicketPostCard
-              key={post.id}
-              post={post}
-              currentUserId={user?.id}
-              onMarkComplete={handleMarkComplete}
-              onDelete={setDeleteTarget}
-              onReport={() => requireAuth(() => setReportOpen(true))}
-              onReplyToggle={handleToggleReplies}
-            >
-              {expandedPost === post.id && commentsMap[post.id] && (
-                <PostReplies
-                  comments={commentsMap[post.id]}
-                  isLoggedIn={isLoggedIn}
-                  isMember={isMember && !replyLocked}
-                  onReply={(content) => handleReply(post.id, content)}
-                />
-              )}
-            </TicketPostCard>
+            <div key={post.id} data-content-id={post.id}>
+              <TicketPostCard
+                post={post}
+                currentUserId={user?.id}
+                interactionLocked={createLocked}
+                onMarkComplete={handleMarkComplete}
+                onReopen={handleReopen}
+                onDelete={setDeleteTarget}
+                onReport={() => requireAuth(() => setReportOpen(true))}
+                onReplyToggle={handleToggleReplies}
+                onChatStarted={(conv) => setChatConversation(conv)}
+              >
+                {expandedPost === post.id && commentsMap[post.id] && (
+                  <PostReplies
+                    comments={commentsMap[post.id]}
+                    isLoggedIn={isLoggedIn}
+                    isMember={isMember && !replyLocked}
+                    onReply={(content) => handleReply(post.id, content)}
+                  />
+                )}
+              </TicketPostCard>
+            </div>
           ))}
         </div>
       )}
@@ -242,6 +270,7 @@ export function TicketTab({ showId, roomId, isMember, createLocked = false, repl
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleCreate}
+        maxKnownPrice={maxKnownPrice}
       />
       <ConfirmDialog
         open={!!deleteTarget}
@@ -255,6 +284,10 @@ export function TicketTab({ showId, roomId, isMember, createLocked = false, repl
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         onSubmit={() => showToast("已收到举报，感谢反馈", "success")}
+      />
+      <TicketChatModal
+        conversation={chatConversation}
+        onClose={() => setChatConversation(null)}
       />
     </div>
   );

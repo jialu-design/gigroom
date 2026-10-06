@@ -4,8 +4,7 @@ import * as React from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-
-const BUDDY_TAGS = ["一起看演出", "排队", "吃饭", "拼车"];
+import { BUDDY_TAGS } from "@/lib/constants";
 
 interface BuddyPostModalProps {
   open: boolean;
@@ -37,7 +36,7 @@ export function BuddyPostModal({ open, onClose, onSubmit }: BuddyPostModalProps)
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="描述你的需求，比如：有没有人一起去看演出？"
+          placeholder="请描述你的需求：时间 + 需求（拼车、拼双人票、互拍等）+ 区域，越详细越容易找到合适的搭子。"
           rows={4}
         />
         <div>

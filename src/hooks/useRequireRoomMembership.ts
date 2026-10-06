@@ -8,7 +8,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 /**
  * useRequireRoomMembership（P7.3：统一房间互动权限）
  *
- * 所有 Show Room 内需要"登录 + 已加入房间"才能执行的操作统一通过此入口触发，
+ * 所有观演小屋内需要"登录 + 已加入"才能执行的操作统一通过此入口触发，
  * 避免散落 if (!isLoggedIn) / if (!isMember) 判断。
  *
  * 规则：

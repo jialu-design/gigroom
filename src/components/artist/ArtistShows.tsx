@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import type { Show } from "@/lib/types";
-import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+import { classifyShows } from "@/lib/utils/showState";
 import { ShowCardCompact } from "@/components/show/ShowCardCompact";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 
 interface ArtistShowsProps {
@@ -15,24 +16,18 @@ type Tab = "upcoming" | "past";
 /**
  * 乐队演出列表（即将演出 / 过往演出 二级 Tab）
  *
- * 分类必须基于 getShowLifecycle，禁止散落 new Date() 判断。
- * - 即将演出：!hasEnded（含 upcoming/postponed/cancelled，cancelled 仍展示）
- *   按时间升序，最近一场最前
- * - 过往演出：hasEnded，按时间倒序，最近结束的最前
+ * 分类唯一口径：utils/showState.classifyShows，禁止散落 new Date() 判断。
+ * - 即将演出：仅 upcoming 分组，日期升序
+ * - 过往演出：已结束 + 已取消 + 已延期（延期/取消不进"即将"），日期倒序
  * 列表项复用 ShowCardCompact，点击进入 /show/[id]。
  */
 export function ArtistShows({ shows }: ArtistShowsProps) {
   const { upcoming, past } = React.useMemo(() => {
-    const up: Show[] = [];
-    const pa: Show[] = [];
-    for (const show of shows) {
-      const lc = getShowLifecycle(show);
-      if (lc.hasEnded) pa.push(show);
-      else up.push(show);
-    }
-    up.sort((a, b) => a.date_time.localeCompare(b.date_time));
-    pa.sort((a, b) => b.date_time.localeCompare(a.date_time));
-    return { upcoming: up, past: pa };
+    const c = classifyShows(shows);
+    return {
+      upcoming: c.upcoming,
+      past: [...c.ended, ...c.postponed, ...c.cancelled],
+    };
   }, [shows]);
 
   const [tab, setTab] = React.useState<Tab>("upcoming");
@@ -78,13 +73,13 @@ export function ArtistShows({ shows }: ArtistShowsProps) {
       </div>
 
       {list.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border p-10 text-center">
-          <p className="text-text-tertiary text-sm">
-            {tab === "upcoming"
+        <EmptyState
+          title={
+            tab === "upcoming"
               ? "暂时没有即将到来的演出"
-              : "暂时没有过往演出记录"}
-          </p>
-        </div>
+              : "暂时没有过往演出记录"
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {list.map((show) => (

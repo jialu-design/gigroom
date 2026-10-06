@@ -482,10 +482,16 @@ describe("P10.2-D G — UI 不直接访问 Supabase", () => {
     expect(content).not.toContain('from "@/lib/supabase/publicData"');
   });
 
-  it("ShowDetail 通过 API 层调用 joinRoom", () => {
-    const content = read("src/app/show/[id]/page.tsx");
-    expect(content).toContain('from "@/lib/api/rooms"');
-    expect(content).toMatch(/joinRoom/);
+  it("ShowDetail 通过 API 层调用 joinRoom（server 外壳 + client 内核）", () => {
+    // server 外壳只做预取/404，交互逻辑在 client 内核
+    const page = read("src/app/show/[id]/page.tsx");
+    expect(page).toContain("getShowById");
+    const client = read("src/components/show/editorial/ShowEditorialClient.tsx");
+    expect(client).toContain('from "@/lib/api/rooms"');
+    expect(client).toMatch(/joinRoom/);
+    // 双层都不直接碰 Supabase client
+    expect(client).not.toContain('from "@/lib/supabase/client"');
+    expect(client).not.toContain('from "@/lib/supabase/publicData"');
   });
 
   it("DiscussionTab 通过 API 层调用 messages", () => {

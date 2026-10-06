@@ -7,7 +7,6 @@
  * C. attended_check 生成（going+ended / interested / attended / 未结束 / 防重复）
  * D. attended_check 回答（"是的"→attended / "没去成"→清除going / RoomMembership独立 / 双按钮标记已读）
  * E. new_show 生成（follow+同城 / 未follow / 不同城 / 防重复）
- * F. announcement 生成（going / interested / room member / 无关 / 防重复）
  * G. persist（已读状态 + attended 回答结果 持久化）
  * H. Notification UI Store（EditProfileModal 与 Notification 共存的 UI state）
  */
@@ -18,12 +17,24 @@ import { NotificationType, UserShowStatus } from "@/lib/types";
 import type { Notification } from "@/lib/types";
 import {
   generateNewShowNotification,
-  generateAnnouncementNotification,
   generateAttendedCheckNotification,
   checkAndGenerateAttendedNotifications,
   answerAttendedCheckYes,
   answerAttendedCheckNo,
+  generateDiscussionReplyNotification,
+  generateBuddyReplyNotification,
+  generateLiveInteractionNotification,
+  generateTicketFavoriteNotification,
+  generateTicketMessageNotification,
+  markNotificationRead as markNotificationReadApi,
+  markNotificationsContentDeleted,
 } from "@/lib/api/notifications";
+import { sendMessage, deleteMessage } from "@/lib/api/messages";
+import { createBuddyPost, deleteBuddyPost } from "@/lib/api/posts/buddyPosts";
+import { createLivePost, deleteLivePost } from "@/lib/api/posts/livePosts";
+import { deleteTicketPost } from "@/lib/api/posts/ticketPosts";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { showMap } from "@/mocks/shows";
 import { mockShowRooms } from "@/mocks/shows";
 import { getShowLifecycle } from "@/lib/utils/showLifecycle";
@@ -175,12 +186,11 @@ describe("P9 B. notification list（排序与状态）", () => {
     expect(hasUnread).toBe(true);
   });
 
-  it("mock 数据包含三种通知类型", () => {
+  it("mock 数据包含 new_show 与 attended_check 两种通知类型", () => {
     useUserStore.getState().mockLogin();
     const notifs = useUserStore.getState().notifications;
     const types = new Set(notifs.map((n) => n.type));
     expect(types.has(NotificationType.NEW_SHOW)).toBe(true);
-    expect(types.has(NotificationType.ANNOUNCEMENT)).toBe(true);
     expect(types.has(NotificationType.ATTENDED_CHECK)).toBe(true);
   });
 
@@ -200,23 +210,6 @@ describe("P9 B. notification list（排序与状态）", () => {
     if (newShowNotif!.related_show_id) {
       const url = `/show/${newShowNotif!.related_show_id}`;
       expect(url.startsWith("/show/")).toBe(true);
-    }
-  });
-
-  it("点击 announcement → 标记已读 → URL 应为 /show/[id]#announcements", () => {
-    useUserStore.getState().mockLogin();
-    const annNotif = useUserStore
-      .getState()
-      .notifications.find((n) => n.type === NotificationType.ANNOUNCEMENT && !n.is_read);
-    expect(annNotif).toBeDefined();
-    useUserStore.getState().markNotificationRead(annNotif!.id);
-    const updated = useUserStore
-      .getState()
-      .notifications.find((n) => n.id === annNotif!.id);
-    expect(updated?.is_read).toBe(true);
-    if (annNotif!.related_show_id) {
-      const url = `/show/${annNotif!.related_show_id}#announcements`;
-      expect(url.endsWith("#announcements")).toBe(true);
     }
   });
 });
@@ -430,7 +423,7 @@ describe("P9 E. new_show 生成逻辑", () => {
 
   it("未 follow → 不生成", () => {
     useUserStore.getState().mockLogin();
-    // show-2: artist-6 (海朋森), 成都 — 用户未关注
+    // show-2: artist-6 (开端), 成都 — 用户未关注
     const result = generateNewShowNotification("user-1", "show-2");
     expect(result).toBeNull();
   });
@@ -452,72 +445,6 @@ describe("P9 E. new_show 生成逻辑", () => {
     const first = generateNewShowNotification("user-1", "show-4");
     expect(first).not.toBeNull();
     const second = generateNewShowNotification("user-1", "show-4");
-    expect(second).toBeNull();
-  });
-});
-
-// ========================
-// F. announcement 生成
-// ========================
-describe("P9 F. announcement 生成逻辑", () => {
-  it("going 用户生成", () => {
-    useUserStore.getState().mockLogin();
-    // show-4: user going → ann-1 (show-4)
-    useUserStore.setState({
-      notifications: useUserStore
-        .getState()
-        .notifications.filter((n) => n.type !== NotificationType.ANNOUNCEMENT),
-    });
-    const result = generateAnnouncementNotification("user-1", "ann-1");
-    expect(result).not.toBeNull();
-    expect(result?.related_announcement_id).toBe("ann-1");
-  });
-
-  it("interested 用户生成", () => {
-    useUserStore.getState().mockLogin();
-    // ann-2: show-5 → 设置 user 对 show-5 为 interested
-    useUserStore.setState({
-      notifications: useUserStore
-        .getState()
-        .notifications.filter((n) => n.type !== NotificationType.ANNOUNCEMENT),
-    });
-    useUserStore.getState().setShowStatus("show-5", UserShowStatus.INTERESTED);
-    const result = generateAnnouncementNotification("user-1", "ann-2");
-    expect(result).not.toBeNull();
-  });
-
-  it("room member 生成", () => {
-    useUserStore.getState().mockLogin();
-    // show-1: user room-1 membership → ann-7 (show-1)
-    // 但用户 show-1 status 是 attended（不是 going/interested）
-    useUserStore.setState({
-      notifications: useUserStore
-        .getState()
-        .notifications.filter((n) => n.type !== NotificationType.ANNOUNCEMENT),
-    });
-    // 确保不 going/interested（只有 room membership）
-    useUserStore.getState().removeShowStatus("show-1");
-    const result = generateAnnouncementNotification("user-1", "ann-7");
-    expect(result).not.toBeNull();
-  });
-
-  it("无关系用户不生成", () => {
-    useUserStore.getState().mockLogin();
-    // ann-3: show-9 — 用户无 status / 无 room
-    const result = generateAnnouncementNotification("user-1", "ann-3");
-    expect(result).toBeNull();
-  });
-
-  it("同一 announcement 不重复生成", () => {
-    useUserStore.getState().mockLogin();
-    useUserStore.setState({
-      notifications: useUserStore
-        .getState()
-        .notifications.filter((n) => n.type !== NotificationType.ANNOUNCEMENT),
-    });
-    const first = generateAnnouncementNotification("user-1", "ann-1");
-    expect(first).not.toBeNull();
-    const second = generateAnnouncementNotification("user-1", "ann-1");
     expect(second).toBeNull();
   });
 });
@@ -617,5 +544,251 @@ describe("P9 H. addNotification 防重复（store 层）", () => {
     expect(useUserStore.getState().notifications.length).toBeGreaterThan(0);
     useUserStore.getState().logout();
     expect(useUserStore.getState().notifications).toEqual([]);
+  });
+});
+
+// ========================
+// I. P4 收口：互动通知闭环（生成→未读→深链→已读→内容删除失效）
+// ========================
+describe("P4 收口. 互动通知闭环（生成→未读→深链→已读→内容删除失效）", () => {
+  beforeEach(() => {
+    useUserStore.getState().mockLogin();
+    useUserStore.setState({ notifications: [] });
+  });
+
+  function findNotif(id: string): Notification {
+    const n = useUserStore.getState().notifications.find((x) => x.id === id);
+    expect(n).toBeDefined();
+    return n!;
+  }
+
+  it("讨论回复：生成即未读 → target_url 指向 discussion tab → 标记已读 → 删消息后失效", async () => {
+    // show-12（2026-09-20）在固定时钟 2026-09-18 下未结束，聊天开放
+    const msg = await sendMessage("show-12", "user-1", "P4 原讨论消息");
+    const notif = generateDiscussionReplyNotification(
+      "user-1",
+      "user-2",
+      "show-12",
+      msg.id
+    );
+    expect(notif).not.toBeNull();
+    expect(notif!.is_read).toBe(false);
+    expect(getUnread()).toBe(1);
+    expect(notif!.type).toBe(NotificationType.DISCUSSION_REPLY);
+    expect(notif!.target_url).toBe("/show/show-12?tab=discussion#room");
+    expect(notif!.related_content_id).toBe(msg.id);
+
+    await markNotificationReadApi(notif!.id);
+    expect(findNotif(notif!.id).is_read).toBe(true);
+    expect(getUnread()).toBe(0);
+
+    await deleteMessage(msg.id, "user-1");
+    const updated = findNotif(notif!.id);
+    expect(updated.is_content_deleted).toBe(true);
+    // 失效后保持已读（无未读红点残留）
+    expect(updated.is_read).toBe(true);
+  });
+
+  it("讨论回复：同内容幂等，自发自收不通知", () => {
+    const first = generateDiscussionReplyNotification(
+      "user-1",
+      "user-2",
+      "show-4",
+      "p4-msg-dedup"
+    );
+    expect(first).not.toBeNull();
+    const second = generateDiscussionReplyNotification(
+      "user-1",
+      "user-2",
+      "show-4",
+      "p4-msg-dedup"
+    );
+    expect(second).toBeNull();
+    const self = generateDiscussionReplyNotification(
+      "user-1",
+      "user-1",
+      "show-4",
+      "p4-msg-self"
+    );
+    expect(self).toBeNull();
+  });
+
+  it("找搭子回复：深链 buddy tab → 标记已读 → 删帖后失效", async () => {
+    const post = await createBuddyPost("show-4", "user-1", {
+      content: "P4 拼车",
+      tags: ["carpool"],
+    });
+    const notif = generateBuddyReplyNotification(
+      "user-1",
+      "user-2",
+      "show-4",
+      post.id
+    );
+    expect(notif).not.toBeNull();
+    expect(notif!.is_read).toBe(false);
+    expect(notif!.type).toBe(NotificationType.BUDDY_REPLY);
+    expect(notif!.target_url).toBe("/show/show-4?tab=buddy#room");
+
+    await markNotificationReadApi(notif!.id);
+    await deleteBuddyPost(post.id, "user-1");
+    const updated = findNotif(notif!.id);
+    expect(updated.is_content_deleted).toBe(true);
+    expect(updated.is_read).toBe(true);
+    expect(getUnread()).toBe(0);
+  });
+
+  it("现场互动（点赞/评论）：深链 live tab → 标记已读 → 删帖后失效", async () => {
+    const post = await createLivePost("show-4", "user-1", {
+      content: "P4 安可现场",
+      imageUrls: [],
+    });
+    const likeNotif = generateLiveInteractionNotification(
+      "user-1",
+      "user-2",
+      "show-4",
+      post.id,
+      "like"
+    );
+    expect(likeNotif).not.toBeNull();
+    expect(likeNotif!.target_url).toBe("/show/show-4?tab=live#room");
+    expect(likeNotif!.title).toContain("点赞");
+
+    const commentNotif = generateLiveInteractionNotification(
+      "user-1",
+      "user-3",
+      "show-4",
+      post.id,
+      "comment"
+    );
+    expect(commentNotif).not.toBeNull();
+    expect(commentNotif!.title).toContain("评论");
+    expect(getUnread()).toBe(2);
+
+    await markNotificationReadApi(likeNotif!.id);
+    await deleteLivePost(post.id, "user-1");
+    for (const id of [likeNotif!.id, commentNotif!.id]) {
+      const updated = findNotif(id);
+      expect(updated.is_content_deleted).toBe(true);
+      expect(updated.is_read).toBe(true);
+    }
+    expect(getUnread()).toBe(0);
+  });
+
+  it("出收票收藏：深链直达 ticket tab（不重定向到 discussion）", () => {
+    // tp-1 是 user-1 发布在 show-5 的收票帖
+    const notif = generateTicketFavoriteNotification(
+      "user-1",
+      "tp-1",
+      "user-2",
+      "show-5"
+    );
+    expect(notif).not.toBeNull();
+    expect(notif!.type).toBe(NotificationType.TICKET_FAVORITE);
+    expect(notif!.is_read).toBe(false);
+    expect(notif!.related_content_id).toBe("tp-1");
+    expect(notif!.related_show_id).toBe("show-5");
+    expect(notif!.target_url).toBe("/show/show-5?tab=ticket#room");
+    expect(notif!.title).toContain("收藏");
+
+    // 同一收藏者不重复轰炸
+    const dup = generateTicketFavoriteNotification(
+      "user-1",
+      "tp-1",
+      "user-2",
+      "show-5"
+    );
+    expect(dup).toBeNull();
+  });
+
+  it("交易消息：深链直达 ticket tab；同会话 30s 内幂等", () => {
+    // conv-2 是 tp-1 下的会话
+    const notif = generateTicketMessageNotification(
+      "user-1",
+      "conv-2",
+      "user-2",
+      "show-5"
+    );
+    expect(notif).not.toBeNull();
+    expect(notif!.type).toBe(NotificationType.TICKET_MESSAGE);
+    expect(notif!.related_content_id).toBe("conv-2");
+    expect(notif!.target_url).toBe("/show/show-5?tab=ticket#room");
+
+    const dup = generateTicketMessageNotification(
+      "user-1",
+      "conv-2",
+      "user-2",
+      "show-5"
+    );
+    expect(dup).toBeNull();
+  });
+
+  it("删除出收票帖：收藏通知与该帖全部会话消息通知同时失效，其他通知不受影响", async () => {
+    // 无关通知（找搭子）不应被波及
+    const unrelated = generateBuddyReplyNotification(
+      "user-1",
+      "user-2",
+      "show-4",
+      "bp-unrelated"
+    );
+    expect(unrelated).not.toBeNull();
+
+    const fav = generateTicketFavoriteNotification(
+      "user-1",
+      "tp-1",
+      "user-2",
+      "show-5"
+    );
+    const msg = generateTicketMessageNotification(
+      "user-1",
+      "conv-2",
+      "user-2",
+      "show-5"
+    );
+    expect(fav).not.toBeNull();
+    expect(msg).not.toBeNull();
+    expect(getUnread()).toBe(3);
+
+    await deleteTicketPost("tp-1", "user-1");
+
+    expect(findNotif(fav!.id).is_content_deleted).toBe(true);
+    expect(findNotif(msg!.id).is_content_deleted).toBe(true);
+    expect(findNotif(unrelated!.id).is_content_deleted).toBeFalsy();
+    // 两条失效通知清除未读；无关通知仍未读
+    expect(getUnread()).toBe(1);
+  });
+
+  it("markNotificationsContentDeleted 对不匹配的通知无副作用", () => {
+    const notif = generateDiscussionReplyNotification(
+      "user-1",
+      "user-2",
+      "show-4",
+      "p4-msg-keep"
+    );
+    expect(notif).not.toBeNull();
+    markNotificationsContentDeleted(["some-other-id"]);
+    const updated = findNotif(notif!.id);
+    expect(updated.is_content_deleted).toBeFalsy();
+    expect(updated.is_read).toBe(false);
+  });
+
+  it("未登录时互动通知不生成", () => {
+    useUserStore.getState().logout();
+    expect(
+      generateDiscussionReplyNotification("user-1", "user-2", "show-4", "m-x")
+    ).toBeNull();
+    expect(
+      generateTicketFavoriteNotification("user-1", "tp-1", "user-2", "show-5")
+    ).toBeNull();
+  });
+
+  it("NotificationItem 守卫：失效内容点击不跳转，并展示内容已失效", () => {
+    const src = readFileSync(
+      resolve(__dirname, "../../components/notification/NotificationItem.tsx"),
+      "utf-8"
+    );
+    expect(src).toContain("if (deleted) return;");
+    expect(src).toContain("内容已失效");
+    // 失效行不具备 button 角色
+    expect(src).toContain('n.type !== NotificationType.ATTENDED_CHECK && !deleted');
   });
 });

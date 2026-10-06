@@ -45,7 +45,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "inline-flex items-center justify-center gap-2 font-medium transition-colors duration-150 select-none whitespace-nowrap",
           variantClasses[variant],
           sizeClasses[size],
-          variant !== "link" && "min-h-[44px]",
           className
         )}
         {...props}

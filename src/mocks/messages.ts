@@ -82,7 +82,7 @@ export const mockMessages: DiscussionMessage[] = [
     reply_to_user: u("user-5"),
     created_at: "2026-08-16T09:30:00Z",
   },
-  // room-1 (show-1: 已结束，Chinese Football x 柏林护士 武汉)
+  // room-1 (show-1: 已结束，Chinese Football x 鼠鼠鼠 武汉)
   {
     id: "msg-9",
     room_id: "room-1",
@@ -96,7 +96,7 @@ export const mockMessages: DiscussionMessage[] = [
     room_id: "room-1",
     user_id: "user-1",
     user: u("user-1"),
-    content: "柏林护士的support set也很惊喜，第一次听就被圈粉了",
+    content: "鼠鼠鼠的support set也很惊喜，第一次听就被圈粉了",
     created_at: "2026-07-26T11:00:00Z",
   },
   {
@@ -116,5 +116,33 @@ export const mockMessages: DiscussionMessage[] = [
     reply_to_id: "msg-11",
     reply_to_user: u("user-5"),
     created_at: "2026-07-26T14:30:00Z",
+  },
+  // room-15 (show-15: RUBUR 上海 2026-10-02，未结束场次 → 讨论 Tab 有内容可走查；
+  // 其他未加入/未发言的场次仍保留真正的空讨论态)
+  {
+    id: "msg-15-1",
+    room_id: "room-15",
+    user_id: "user-1",
+    user: u("user-1"),
+    content: "明天 RUBUR 上海场！育音堂见，有人提前去排队吗",
+    created_at: "2026-09-30T12:00:00Z",
+  },
+  {
+    id: "msg-15-2",
+    room_id: "room-15",
+    user_id: "user-3",
+    user: u("user-3"),
+    content: "我也去！打算六点半到，可以一起排",
+    reply_to_id: "msg-15-1",
+    reply_to_user: u("user-1"),
+    created_at: "2026-09-30T12:30:00Z",
+  },
+  {
+    id: "msg-15-3",
+    room_id: "room-15",
+    user_id: "user-5",
+    user: u("user-5"),
+    content: "带上录音笔了，散场后分享整场录音",
+    created_at: "2026-09-30T14:00:00Z",
   },
 ];

@@ -20,6 +20,7 @@ import { mockLivePosts } from "@/mocks/livePosts";
 import { hydrateUsers, hydrateUser } from "@/lib/api/profile";
 import { trackEvent } from "@/lib/api/events";
 import { resolveMockAuthor } from "@/lib/api/mockUser";
+import { markNotificationsContentDeleted } from "@/lib/api/notifications";
 import {
   livePostsFrom,
   livePostRowToLivePost,
@@ -31,6 +32,11 @@ const delay = <T>(data: T, ms = 100): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(data), ms));
 
 let posts = [...mockLivePosts];
+
+/** 按 id 查找现场帖（P5 互动用，含运行时新建帖） */
+export function findLivePostById(postId: string): LivePost | undefined {
+  return posts.find((p) => p.id === postId);
+}
 
 /** 获取演出的现场帖（按时间倒序） */
 export async function getLivePosts(showId: string): Promise<LivePost[]> {
@@ -150,6 +156,8 @@ export async function deleteLivePost(
         .eq("id", postId)
         .eq("user_id", userId);
       if (error) throw error;
+      // 帖子删除 → 点赞/评论互动通知失效
+      markNotificationsContentDeleted([postId]);
       return;
     } catch {
       warnSupabaseNotConfigured("live_posts");
@@ -164,6 +172,8 @@ export async function deleteLivePost(
   if (!post) throw new Error("Post not found");
   if (post.user_id !== userId) throw new Error("Cannot delete others' posts");
   posts = posts.filter((p) => p.id !== postId);
+  // 帖子删除 → 点赞/评论互动通知失效
+  markNotificationsContentDeleted([postId]);
   return delay(undefined);
 }
 

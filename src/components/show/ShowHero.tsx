@@ -5,18 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, Users, Calendar, MapPin, ExternalLink } from "lucide-react";
 import type { Show, UserShowStatus } from "@/lib/types";
-import { ShowStatus, ShowTicketStatus, ArtistRole, UserShowStatus as UserShowStatusEnum } from "@/lib/types";
+import { ShowTicketStatus, ArtistRole, UserShowStatus as UserShowStatusEnum } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+import { getEffectiveShowState } from "@/lib/utils/showState";
 import {
   formatShowDateTime,
   getTicketStatusLabel,
   getTicketStatusBadgeVariant,
-  getShowStatusLabel,
-  getShowStatusBadgeVariant,
-  isShowInactive,
   getShowPosterFallback,
 } from "@/lib/utils/format";
 
@@ -46,7 +43,7 @@ export function ShowHero({
   onStatusChange,
   className,
 }: ShowHeroProps) {
-  const lifecycle = React.useMemo(() => getShowLifecycle(show), [show]);
+  const state = React.useMemo(() => getEffectiveShowState(show), [show]);
   const headliner = show.artists?.find(
     (a) => a.role === ArtistRole.HEADLINER
   );
@@ -57,9 +54,6 @@ export function ShowHero({
 
   const ticketLabel = getTicketStatusLabel(show.ticket_status);
   const ticketVariant = getTicketStatusBadgeVariant(show.ticket_status);
-  const showStatusLabel = getShowStatusLabel(show.status);
-  const showStatusVariant = getShowStatusBadgeVariant(show.status);
-  const inactive = isShowInactive(show.status);
 
   const interested = userShowStatus === "interested";
   const going = userShowStatus === "going";
@@ -70,16 +64,16 @@ export function ShowHero({
     onStatusChange?.(targetStatus);
   };
 
-  /** 根据状态决定购票按钮 */
+  /** 根据状态决定购票按钮（四态互斥，口径来自 state.bucket） */
   const renderTicketButton = () => {
-    if (show.status === ShowStatus.CANCELLED) {
+    if (state.bucket === "cancelled") {
       return (
         <div className="w-full rounded-md border border-border bg-bg-secondary p-4 text-center text-text-secondary">
           <span className="text-sm">本场演出已取消</span>
         </div>
       );
     }
-    if (show.status === ShowStatus.POSTPONED) {
+    if (state.bucket === "postponed") {
       return (
         <div className="w-full rounded-md border border-accent-yellow/40 bg-accent-yellow/10 p-4 text-center">
           <span className="text-sm text-accent-yellow">
@@ -89,7 +83,7 @@ export function ShowHero({
       );
     }
     // 已结束（含状态字段滞后、日期已过的演出）：不提供购票
-    if (lifecycle.hasEnded) {
+    if (state.bucket === "ended") {
       return (
         <div className="w-full rounded-md border border-border bg-bg-secondary p-4 text-center text-text-tertiary">
           <span className="text-sm">演出已结束，感谢到场的每一位</span>
@@ -132,8 +126,8 @@ export function ShowHero({
         >
           <Button variant="primary" size="lg" className="w-full justify-center">
             {show.ticket_platform
-              ? `在${show.ticket_platform}购票`
-              : "购票"}
+              ? `去${show.ticket_platform}购票`
+              : "去购票"}
             <ExternalLink size={16} />
           </Button>
         </a>
@@ -156,7 +150,7 @@ export function ShowHero({
             alt={displayName}
             fill
             sizes="(max-width: 1024px) 100vw, 60vw"
-            className={cn("object-cover", inactive && "opacity-60 grayscale")}
+            className={cn("object-cover", state.isInactive && "opacity-60 grayscale")}
             priority
           />
           {/* DEMO 角标 */}
@@ -173,14 +167,12 @@ export function ShowHero({
                   {ticketLabel}
                 </Badge>
               )}
-              {/* 日期已过但状态滞后的演出同样展示"已结束" */}
-              {show.status !== ShowStatus.UPCOMING || lifecycle.hasEnded ? (
-                <Badge variant={showStatusVariant} size="md">
-                  {lifecycle.hasEnded && show.status === ShowStatus.UPCOMING
-                    ? "已结束"
-                    : showStatusLabel}
+              {/* 非 upcoming 一律展示归一后的状态标签（含状态滞后→已结束） */}
+              {state.bucket !== "upcoming" && (
+                <Badge variant={state.badgeVariant} size="md">
+                  {state.label}
                 </Badge>
-              ) : null}
+              )}
             </div>
           </div>
         </div>

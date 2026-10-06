@@ -43,12 +43,41 @@ export const GENRES = [
   "Garage Rock",
 ];
 
+/**
+ * Genre UI 中文展示映射（仅用于展示层 label，不改 artists.ts Canonical genres 原始数据）。
+ * 未映射的 genre 原样展示英文原词。
+ */
+export const GENRE_LABEL: Record<string, string> = {
+  Emo: "情绪摇滚",
+  Shoegaze: "盯鞋",
+  "Math Rock": "数学摇滚",
+  "Indie Rock": "独立摇滚",
+  "Post-Punk": "后朋克",
+  "Post-Rock": "后摇",
+  Punk: "朋克",
+  Hardcore: "硬核",
+  "Dream Pop": "梦幻流行",
+  Britpop: "英伦摇滚",
+  Alternative: "另类",
+  Folk: "民谣",
+  Electronic: "电子",
+  "Noise Rock": "噪音摇滚",
+  "Garage Rock": "车库摇滚",
+};
+
+/** 取 genre 的展示 label（有中文映射用中文，否则原样英文） */
+export function getGenreLabel(genre: string): string {
+  return GENRE_LABEL[genre] ?? genre;
+}
+
 // 找搭子标签
 export const BUDDY_TAGS = [
   "一起看演出",
   "排队",
   "吃饭",
   "拼车",
+  "拼双人票",
+  "互拍",
 ];
 
 // 讨论消息发送 cooldown（毫秒），UI 层强制 10 秒
@@ -72,6 +101,5 @@ export const SHOW_TICKET_STATUS_LABEL: Record<string, string> = {
 // 通知类型图标映射
 export const NOTIFICATION_ICON: Record<string, string> = {
   new_show: "🔔",
-  announcement: "📢",
   attended_check: "❓",
 };

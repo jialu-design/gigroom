@@ -16,7 +16,7 @@
  * - leaveRoom：delete 自然幂等
  */
 import type { ShowRoom, RoomMembership } from "@/lib/types";
-import { EventType, TargetType, RoomStatus, ShowStatus } from "@/lib/types";
+import { EventType, TargetType, RoomStatus } from "@/lib/types";
 import { mockShowRooms } from "@/mocks/shows";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import {
@@ -29,7 +29,7 @@ import {
 } from "@/lib/supabase/publicData";
 import { trackEvent } from "@/lib/api/events";
 import { getShowById } from "@/lib/api/shows";
-import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+import { deriveRoomStatus } from "@/lib/utils/showState";
 
 const delay = <T>(data: T, ms = 100): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(data), ms));
@@ -311,39 +311,17 @@ export async function syncRoomMemberships(userId: string): Promise<void> {
 // ============
 
 /**
- * 根据 Show 状态和时间推导 Room 生命周期状态
- *
- * 规则：
- * - show.status = CANCELLED / POSTPONED → ARCHIVED
- * - show.status = ENDED → ENDED
- * - show.status = UPCOMING + 演出当天 → ACTIVE
- * - show.status = UPCOMING + 演出前 → UPCOMING
- * - 演出已过且状态仍为 UPCOMING（过期未更新）→ ENDED
+ * 根据 Show 状态和时间推导 Room 生命周期状态。
+ * 规则唯一来源：utils/showState.deriveRoomStatus（禁止本文件另写一套分支）。
+ * - CANCELLED / POSTPONED → ARCHIVED
+ * - ENDED（含状态滞后、日期已过）→ ENDED
+ * - UPCOMING + 演出当天 → ACTIVE；演出前 → UPCOMING
  */
 export async function getRoomStatus(showId: string): Promise<RoomStatus> {
   try {
     const show = await getShowById(showId);
     if (!show) return RoomStatus.ARCHIVED;
-
-    // 取消/延期的演出 → Room 归档
-    if (show.status === ShowStatus.CANCELLED || show.status === ShowStatus.POSTPONED) {
-      return RoomStatus.ARCHIVED;
-    }
-
-    // 已结束的演出 → Room 结束
-    if (show.status === ShowStatus.ENDED) {
-      return RoomStatus.ENDED;
-    }
-
-    // 使用 showLifecycle 判断当前时间状态
-    const lifecycle = getShowLifecycle(show);
-    if (lifecycle.hasEnded) {
-      return RoomStatus.ENDED;
-    }
-    if (lifecycle.isToday) {
-      return RoomStatus.ACTIVE;
-    }
-    return RoomStatus.UPCOMING;
+    return deriveRoomStatus(show);
   } catch {
     // 获取演出失败时默认 UPCOMING，不阻塞业务
     return RoomStatus.UPCOMING;

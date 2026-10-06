@@ -40,7 +40,7 @@ export function TabBar({ tabs, activeKey, onChange, compact = false, className }
             disabled={tab.disabled}
             onClick={() => !tab.disabled && onChange(tab.key)}
             className={cn(
-              "relative flex-1 text-center transition-colors duration-150",
+              "relative flex-1 text-center whitespace-nowrap tabular-nums transition-colors duration-150",
               compact ? "py-2 text-sm" : "py-2.5 text-sm",
               isActive
                 ? "text-text-primary font-semibold"

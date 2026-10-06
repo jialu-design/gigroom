@@ -71,8 +71,8 @@ describe("P6 A. Artist API", () => {
     const en = await getArtists({ search: "chinese" });
     expect(en.data.some((a) => a.id === "artist-1")).toBe(true);
 
-    const zh = await getArtists({ search: "海朋森" });
-    expect(zh.data.some((a) => a.id === "artist-6")).toBe(true);
+    const zh = await getArtists({ search: "鼠鼠鼠" });
+    expect(zh.data.some((a) => a.id === "artist-2")).toBe(true);
   });
 
   it("搜索应 trim 空白，空字符串等同于不过滤", async () => {

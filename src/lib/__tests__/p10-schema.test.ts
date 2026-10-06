@@ -48,7 +48,6 @@ const CORE_TABLES = [
   "room_memberships",
   "user_artist_follows",
   "user_show_statuses",
-  "announcements",
   "discussion_messages",
   "buddy_posts",
   "buddy_post_comments",
@@ -64,7 +63,7 @@ describe("P10.0 Schema 架构测试", () => {
     expect(migrationSql.length).toBeGreaterThan(0);
   });
 
-  it("核心 18 张表定义存在", () => {
+  it("核心 17 张表定义存在", () => {
     for (const table of CORE_TABLES) {
       expect(migrationSql).toContain(`CREATE TABLE public.${table}`);
     }
@@ -259,7 +258,6 @@ describe("P10.0 Schema 架构测试", () => {
   it("notifications 有 partial unique indexes 防重复", () => {
     expect(migrationSql).toContain("notifications_new_show_unique");
     expect(migrationSql).toContain("notifications_attended_check_unique");
-    expect(migrationSql).toContain("notifications_announcement_unique");
   });
 
   // ========================

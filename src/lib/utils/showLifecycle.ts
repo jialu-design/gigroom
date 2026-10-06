@@ -94,7 +94,8 @@ export function getShowLifecycle(show: Show): ShowLifecycle {
   const shouldAskAttendance = hasEnded && !isCancelled && !isPostponed;
 
   return {
-    isUpcoming: !hasEnded && (isUpcoming || isToday),
+    // 仅 status=UPCOMING 且未结束（含当天）；延期/取消永远不是 upcoming
+    isUpcoming: !hasEnded && isUpcoming,
     isToday,
     hasStarted,
     hasEnded,

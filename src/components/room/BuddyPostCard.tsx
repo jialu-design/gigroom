@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -15,6 +16,8 @@ interface BuddyPostCardProps {
   onReplyToggle?: (post: BuddyPost) => void;
   onDelete?: (post: BuddyPost) => void;
   onReport?: (post: BuddyPost) => void;
+  /** 点击私信：导航到对方最小用户主页 /u/[id] */
+  onMessage?: (userId: string) => void;
   children?: React.ReactNode;
 }
 
@@ -24,6 +27,7 @@ export function BuddyPostCard({
   onReplyToggle,
   onDelete,
   onReport,
+  onMessage,
   children,
 }: BuddyPostCardProps) {
   const isOwner = currentUserId === post.user_id;
@@ -32,11 +36,18 @@ export function BuddyPostCard({
   return (
     <div className="rounded-sm border border-border bg-bg-secondary/50 p-4">
       <div className="flex items-start gap-3">
-        <Avatar
-          src={post.user?.avatar_url}
-          fallbackName={userName}
-          size="sm"
-        />
+        {/* 头像点击进入最小用户主页 /u/[id]；不公开联系方式 */}
+        <Link
+          href={`/u/${post.user_id}`}
+          className="shrink-0 hover:opacity-80 transition-opacity"
+          title={`查看 ${userName} 的主页`}
+        >
+          <Avatar
+            src={post.user?.avatar_url}
+            fallbackName={userName}
+            size="sm"
+          />
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -67,17 +78,33 @@ export function BuddyPostCard({
               ))}
             </div>
           )}
-          {/* 回复入口 */}
-          {onReplyToggle && (
-            <button
-              type="button"
-              onClick={() => onReplyToggle(post)}
-              className="mt-2 inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary"
-            >
-              <MessageSquare size={12} />
-              {post.comment_count ?? 0} 回复
-            </button>
-          )}
+          {/* 回复 / 私信入口 */}
+          <div className="mt-2 flex items-center gap-4">
+            {onReplyToggle && (
+              <button
+                type="button"
+                onClick={() => onReplyToggle(post)}
+                className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary"
+              >
+                <MessageSquare size={12} />
+                {post.comment_count ?? 0} 回复
+              </button>
+            )}
+            {currentUserId && currentUserId !== post.user_id && (
+              <Link
+                href={`/u/${post.user_id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onMessage?.(post.user_id);
+                }}
+                className="inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-accent-lime"
+                title={`私信 ${userName}`}
+              >
+                <MessageSquare size={12} />
+                私信
+              </Link>
+            )}
+          </div>
           {children}
         </div>
       </div>

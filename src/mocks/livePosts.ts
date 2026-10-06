@@ -11,7 +11,7 @@ const u = (id: string) => userMap.get(id);
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/600/600`;
 
 export const mockLivePosts: LivePost[] = [
-  // show-1 (Chinese Football x 柏林护士 武汉, 已结束)
+  // show-1 (Chinese Football x 鼠鼠鼠 武汉, 已结束)
   {
     id: "lp-1",
     show_id: "show-1",
@@ -37,17 +37,17 @@ export const mockLivePosts: LivePost[] = [
     show_id: "show-1",
     user_id: "user-1",
     user: u("user-1"),
-    content: "柏林护士的support set真的惊艳，第一次听就被圈粉",
+    content: "鼠鼠鼠的support set真的惊艳，第一次听就被圈粉",
     image_urls: [img("live1d")],
     created_at: "2026-07-26T18:00:00Z",
   },
-  // show-2 (海朋森 成都, 已结束)
+  // show-2 (开端 成都, 已结束)
   {
     id: "lp-4",
     show_id: "show-2",
     user_id: "user-4",
     user: u("user-4"),
-    content: "海朋森成都场，小酒馆氛围太好了",
+    content: "开端成都场，小酒馆氛围太好了",
     image_urls: [img("live2a"), img("live2b")],
     created_at: "2026-07-19T10:00:00Z",
   },
@@ -62,13 +62,13 @@ export const mockLivePosts: LivePost[] = [
     video_platform: VideoPlatform.BILIBILI,
     created_at: "2026-07-19T16:00:00Z",
   },
-  // show-3 (Carsick Cars x Snapline 北京, 已结束)
+  // show-3 (草东没有派对 x mouse on the keys 北京, 已结束)
   {
     id: "lp-6",
     show_id: "show-3",
     user_id: "user-2",
     user: u("user-2"),
-    content: "School太小了但是氛围无敌！Carsick Cars噪音墙太猛",
+    content: "School太小了但是氛围无敌！草东噪音墙太猛",
     image_urls: [img("live3a"), img("live3b"), img("live3c"), img("live3d")],
     created_at: "2026-08-03T10:00:00Z",
   },
@@ -77,7 +77,7 @@ export const mockLivePosts: LivePost[] = [
     show_id: "show-3",
     user_id: "user-5",
     user: u("user-5"),
-    content: "Snapline的电子后朋克现场版比录音室版好听太多",
+    content: "mouse on the keys的钢琴后摇现场版比录音室版好听太多",
     image_urls: [img("live3e")],
     created_at: "2026-08-03T14:00:00Z",
   },

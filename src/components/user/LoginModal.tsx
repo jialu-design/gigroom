@@ -117,7 +117,6 @@ export function LoginModal() {
       open={isLoginModalOpen}
       onClose={cancelLoginModal}
       title={tab === "login" ? "登录" : "注册"}
-      className="max-w-md"
     >
       {/* Tab 切换 */}
       <div className="mb-6 flex gap-6 border-b border-border">

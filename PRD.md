@@ -1,7 +1,7 @@
 # PRD — GigRoom（声场）
 
 **产品代号**：GigRoom
-**产品定位**：Independent Music Show Discovery + Event Community（独立音乐演出发现 + 场次社区平台）
+**产品定位**：Independent Music Show Discovery + Event Community（独立音乐演出发现 + 场次社区平台）—— 面向中国独立现场乐迷
 **版本**：V1 MVP
 **文档状态**：已冻结
 **最后更新**：2026-08-12
@@ -12,9 +12,9 @@
 
 ### 1.1 产品是什么
 
-GigRoom 是一个面向中国独立音乐（Emo / Shoegaze / Math Rock / Indie Rock 等）爱好者的演出发现与场次社区 Web App。
+GigRoom 是一个面向中国独立现场乐迷的演出发现与观演社区 Web App，V1 审美优先覆盖 Midwest Emo / Emo / Shoegaze / Math Rock / Dream Pop / Screamo / Post-Rock / Noise Pop / Alternative / Indie Rock。
 
-它**不是**音乐播放器、不是票务平台、不是泛社交 App、不是短视频平台、不是音乐数据库。
+它**不是**音乐播放器、不是票务平台、不是泛社交 App、不是短视频平台、不是音乐数据库，也**不是**泛"国摇"平台或所有演出的票务社区。
 
 ### 1.2 解决什么问题
 
@@ -43,14 +43,36 @@ Show 是整个产品最核心的数据对象。
 
 ### 1.4 目标用户
 
-中国独立音乐现场演出的观众——会去 Livehouse 看 Chinese Football、柏林护士、Shanghai Qiutian 这类乐队演出的乐迷。他们有明确的音乐口味，会主动追乐队的巡演，但目前获取演出信息和找同好的方式效率很低、体验很碎。
+中国独立现场乐迷——会去 Livehouse 看 Chinese Football、缺省、Shanghai Qiutian、羊文学、toe 这类乐队演出的乐迷。他们有明确的音乐口味，会主动追乐队的巡演，但目前获取演出信息和找同好的方式效率很低、体验很碎。
 
 ### 1.5 第一版范围
 
-- 只关注中国独立乐队，以及来到中国巡演的海外独立乐队
+- 只关注中国独立乐队，以及来到中国/亚洲巡演的日本及海外独立 Artist；Artist 可来自任何国家，Show 发生在中国即可进入 GigRoom
+- 坚持 Show-centric：Artist → Show → 观演小屋
+- V1 审美优先覆盖：Midwest Emo / Emo / Shoegaze / Math Rock / Dream Pop / Screamo / Post-Rock / Noise Pop / Alternative / Indie Rock
+- 不做泛摇滚资讯 / 大众音乐平台
 - 不做日本独立音乐分类、复杂音乐风格分析
 - 不做 Spotify 式音乐推荐系统
 - 支持未登录用户浏览，仅互动时触发登录
+
+### 1.6 内容范围与 Artist 池
+
+V1 Artist 池按以下优先级组织：
+
+1. 中国年轻地下、小型独立乐队为核心（如 鼠鼠鼠、开端、郁云、缺省、波卡利甜 等）
+2. 审美一致的成熟国内乐队（如 Chinese Football、上海秋天、文雀、Dear Eloise 等）
+3. 会在中国/亚洲巡演的日本独立 Artist（如 羊文学、toe、tricot、mouse on the keys 等）
+4. 会在中国/亚洲巡演的海外独立 Artist（如 American Football、Slowdive、DIIV、Alvvays、Men I Trust 等）
+5. 中国台湾独立 Artist（如 草东没有派对、落日飞车、大象体操 等）
+
+**中文用户优先的 Artist 命名规则**：
+
+- 国内乐队：中文名优先；有常用英文名时写"中文名（English Name）"
+- 英文为官方主名的国内乐队可保留英文，并在有稳定中文名时加括号中文名
+- 日本乐队：优先网易云 / 国内乐迷常见中文名或日文原名；不要把罗马音作为主标题；不要为统一格式硬翻译中文名
+- 海外 Artist：有稳定中文译名才加括号，否则保留官方名
+
+GigRoom 不做泛摇滚资讯或大众音乐平台，V1 聚焦上述审美与社区闭环。
 
 ---
 
@@ -174,12 +196,11 @@ APP
 | **Show Room - 找搭子** | 基于同一场演出的 contextual social，解决"一起去"的需求 |
 | **Show Room - 出收票** | 演出门票友好转让信息发布，不做交易，仅信息+沟通 |
 | **Show Room - 现场** | 演出当天起开放的现场内容分享（照片/文字/外部视频），演出后成为永久数字档案 |
-| **演出公告** | 发布与演出直接相关的重要官方信息（开票/售罄/加场/场地变更/延期/取消/嘉宾变化） |
 | **房间（Rooms）** | 用户加入过的所有 Show Room 集合，分即将到来和过往，快速回访 |
 | **乐队详情** | 乐队信息展示、关注操作、查看该乐队所有未来/过往演出 |
 | **乐队发现** | 搜索和浏览乐队，关注新乐队 |
 | **个人主页** | 展示用户音乐身份：我喜欢的乐队、我要去/感兴趣/去过的演出、我的房间 |
-| **通知中心** | 接收新演出提醒、演出公告、演出后确认 attended 的询问 |
+| **通知中心** | 接收新演出提醒、互动通知、演出后确认 attended 的询问 |
 | **登录/注册** | 基础账号系统（Supabase Auth） |
 | **Onboarding** | 新用户首次注册后选择城市、可选关注乐队，为推荐提供基础数据 |
 
@@ -196,7 +217,7 @@ APP
 **操作**：切换Tab（全部/我关注的）、使用 Filter（城市▾、时间▾、风格▾）、点击演出进入详情
 
 ### 5.3 演出详情页（Hero Page）
-**数据**：演出基本信息（海报/乐队/日期/城市/Venue/票价/演出状态/票务状态）、乐队列表（含headliner/support/guest角色）、Interested/Going 人数、当前用户状态（未登录/无状态/interested/going/attended）、用户是否已加入Show Room、Show Room加入人数和活跃度统计（讨论数/找搭子数/票务数）、票务平台和购票链接、公告列表
+**数据**：演出基本信息（海报/乐队/日期/城市/Venue/票价/演出状态/票务状态）、乐队列表（含headliner/support/guest角色）、Interested/Going 人数、当前用户状态（未登录/无状态/interested/going/attended）、用户是否已加入Show Room、Show Room加入人数和活跃度统计（讨论数/找搭子数/票务数）、票务平台和购票链接
 **操作**：
 - 点击[感兴趣]：切换 interested 状态（需登录）
 - 点击[我要去]：切换 going 状态（覆盖 interested，需登录）
@@ -204,7 +225,6 @@ APP
 - 点击[加入演出房间]：加入 Show Room，创建 RoomMembership（需登录）
 - 点击[进入演出房间]：页面滚动到 Show Room 区域
 - 点击乐队名：跳转乐队详情页
-- 浏览公告
 
 ### 5.4 Show Room - 讨论
 **数据**：该演出房间的消息列表（头像/用户名/文字/时间/回复关系）、用户是否已加入房间、用户发送频率限制状态
@@ -278,13 +298,12 @@ APP
 - 点击[查看全部→]进入/rooms页面
 
 ### 5.11 通知中心
-**数据**：当前用户的通知列表，V1 三种类型：
+**数据**：当前用户的通知列表，V1 基础类型：
 1. `new_show`：关注乐队在用户主要城市新增演出
-2. `announcement`：相关演出发布重要公告（对标记going/interested或已加入房间的用户触发）
-3. `attended_check`：演出结束后询问 Going 用户"你去了吗？"
+2. `attended_check`：演出结束后询问 Going 用户"你去了吗？"
 **操作**：
 - 查看通知列表（按时间倒序，未读加粗/色条标识）
-- 点击通知跳转对应演出详情（公告类滚到公告区域）
+- 点击通知跳转对应演出详情页
 - 点击[全部标为已读]
 - 对 attended_check 通知点击[是的我去了]/[没去成]
 - **V1 不做**：Push、短信、邮件、评论通知、@通知、好友动态、附近城市通知
@@ -349,9 +368,6 @@ Show Room持续存在，随时回来查看照片/回忆
      │  │ Hero: 海报/信息/按钮     │  │
      │  └─────────────────────────┘  │
      │  ┌─────────────────────────┐  │
-     │  │ 演出公告（官方信息层）    │  │
-     │  └─────────────────────────┘  │
-     │  ┌─────────────────────────┐  │
      │  │ Show Room（社区层）      │  │
      │  │  讨论|找搭子|出收票|现场  │  │
      │  └─────────────────────────┘  │
@@ -395,7 +411,7 @@ Show Room持续存在，随时回来查看照片/回忆
 ### 7.1 开发阶段
 
 - 开发初期使用 Mock 数据（JSON/TypeScript 对象），存放在项目 `src/mocks/` 目录下
-- Mock 数据包含：演出数据（至少15场，覆盖不同城市/风格/状态）、乐队数据（至少10支）、Venue数据、Mock用户、Mock讨论消息、Mock找搭子帖子、Mock出收票帖子、Mock公告
+- Mock 数据包含：演出数据（至少15场，覆盖不同城市/风格/状态）、乐队数据（至少10支）、Venue数据、Mock用户、Mock讨论消息、Mock找搭子帖子、Mock出收票帖子
 - Mock 数据需符合实际数据模型结构，便于后续切换真实API
 
 ### 7.2 生产阶段
@@ -452,7 +468,6 @@ Show Room持续存在，随时回来查看照片/回忆
 - [ ] [我要去] 按钮切换状态（覆盖interested）
 - [ ] [购票↗] 跳转第三方票务链接
 - [ ] 演出房间入口区（显示已加入人数和活跃度，加入/进入按钮）
-- [ ] 演出公告列表
 - [ ] 点击乐队名跳转乐队详情
 
 ### 8.4 Show Room - 讨论
@@ -511,7 +526,6 @@ Show Room持续存在，随时回来查看照片/回忆
 - [ ] 导航栏🔔图标（带未读数字badge）
 - [ ] 通知中心页面（通知列表+全部标为已读）
 - [ ] 新演出通知生成（关注乐队在用户城市新增演出时）
-- [ ] 演出公告通知生成（用户标记going/interested或加入房间的演出发公告时）
 - [ ] Attended check 通知生成（演出结束后给going用户）
 - [ ] 点击通知跳转对应演出详情
 - [ ] 点击"是的我去了"设置attended=true
@@ -605,7 +619,6 @@ Show Room持续存在，随时回来查看照片/回忆
 - [ ] "购票↗"按钮显示对应平台名称（秀动/大麦/官方），点击新标签页打开购票链接
 - [ ] 未加入房间时显示"286人已加入，43条新讨论·12人找搭子·6条票务"+[加入演出房间]按钮
 - [ ] 加入房间后显示"你已加入·286位乐迷"+[进入演出房间]按钮
-- [ ] 公告区域显示官方公告（无公告时不显示该区域或显示"暂无公告"）
 - [ ] 点击乐队名跳转到对应乐队详情页
 
 ### 10.7 Show Room - 讨论
@@ -669,7 +682,6 @@ Show Room持续存在，随时回来查看照片/回忆
 
 ### 10.13 通知
 - [ ] 关注某乐队后，该乐队在用户城市新增演出时，生成new_show通知
-- [ ] 对标记了going/interested或加入房间的演出发布公告时，生成announcement通知
 - [ ] 演出结束后，对之前标记going的用户生成attended_check通知
 - [ ] 导航栏🔔图标显示未读通知数量
 - [ ] 通知中心按时间倒序显示通知，未读加粗
@@ -715,8 +727,6 @@ RoomMembership (id, user_id, room_id, joined_at)
 UserArtistFollow (id, user_id, artist_id, created_at)
 UserShowStatus (id, user_id, show_id, status, created_at, updated_at)
   status: interested / going / attended
-Announcement (id, show_id, type, title, content, created_at)
-  type: 开票/售罄/加场/场地变更/时间变更/延期/取消/嘉宾变化/主办方公告
 DiscussionMessage (id, room_id, user_id, content, reply_to_id, created_at)
 BuddyPost (id, show_id, user_id, content, tags, created_at)
   tags: ['一起看演出','排队','吃饭','拼车'] 子集
@@ -726,8 +736,8 @@ TicketPost (id, show_id, user_id, type, quantity, face_value, price, note, statu
 TicketPostComment (id, ticket_post_id, user_id, content, created_at)
 LivePost (id, show_id, user_id, content, image_urls, video_url, video_platform, created_at)
   video_platform: bilibili/xiaohongshu/douyin/youtube
-Notification (id, user_id, type, title, related_show_id, related_announcement_id, is_read, created_at)
-  type: new_show / announcement / attended_check
+Notification (id, user_id, type, title, related_show_id, related_content_id, is_read, created_at)
+  type: new_show / attended_check
 ```
 
 ## 附录B：视觉风格关键词

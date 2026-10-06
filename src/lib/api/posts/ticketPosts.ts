@@ -28,6 +28,8 @@ import { userMap } from "@/mocks/users";
 import { hydrateUsers, hydrateUser } from "@/lib/api/profile";
 import { trackEvent } from "@/lib/api/events";
 import { resolveMockAuthor } from "@/lib/api/mockUser";
+import { markNotificationsContentDeleted } from "@/lib/api/notifications";
+import { getConversationIdsByPost } from "@/lib/api/ticketMessages";
 import {
   ticketPostsFrom,
   ticketPostCommentsFrom,
@@ -41,6 +43,11 @@ const delay = <T>(data: T, ms = 100): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(data), ms));
 
 let posts = [...mockTicketPosts];
+
+/** P3：供收藏/会话模块查找帖子（含运行时新建帖，统一 mock 内存数据源） */
+export function findTicketPostById(postId: string): TicketPost | undefined {
+  return posts.find((p) => p.id === postId);
+}
 
 let comments: TicketPostComment[] = [
   { id: "tpc-1", ticket_post_id: "tp-1", user_id: "user-3", user: userMap.get("user-3"), content: "我有一张，私信你了", created_at: "2026-07-25T11:00:00Z" },
@@ -116,6 +123,7 @@ export async function createTicketPost(
   }
 ): Promise<TicketPost> {
   if (input.quantity <= 0) throw new Error("数量必须大于0");
+  if (input.quantity > 2) throw new Error("单帖最多 2 张");
   if (input.faceValue !== undefined && input.faceValue <= 0)
     throw new Error("票面价必须大于0");
   // 出票：转让价不得高于票面价
@@ -233,6 +241,11 @@ export async function deleteTicketPost(
   postId: string,
   userId: string
 ): Promise<void> {
+  /** 帖子删除后：失效收藏通知 + 该帖下交易会话的消息通知 */
+  const invalidateNotifications = () => {
+    markNotificationsContentDeleted([postId, ...getConversationIdsByPost(postId)]);
+  };
+
   if (isBehaviorSupabaseEnabled()) {
     try {
       const { error } = await ticketPostsFrom()
@@ -241,6 +254,7 @@ export async function deleteTicketPost(
         .eq("user_id", userId);
       if (error) throw error;
       comments = comments.filter((c) => c.ticket_post_id !== postId);
+      invalidateNotifications();
       return;
     } catch {
       warnSupabaseNotConfigured("ticket_posts");
@@ -256,6 +270,7 @@ export async function deleteTicketPost(
   if (post.user_id !== userId) throw new Error("Cannot delete others' posts");
   posts = posts.filter((p) => p.id !== postId);
   comments = comments.filter((c) => c.ticket_post_id !== postId);
+  invalidateNotifications();
   return delay(undefined);
 }
 

@@ -7,9 +7,14 @@ import { Textarea } from "@/components/ui/Textarea";
 import type { TicketPostType } from "@/lib/types";
 import { TicketPostType as TPT } from "@/lib/types";
 
+/** 出收票单帖票数上限 */
+export const MAX_TICKET_QUANTITY = 2;
+
 interface TicketPostModalProps {
   open: boolean;
   onClose: () => void;
+  /** 该 Show 的最高已知票价（max(price_presale, price_door)），无则 undefined，用于锁票面价 */
+  maxKnownPrice?: number;
   onSubmit: (input: {
     type: TicketPostType;
     quantity: number;
@@ -19,7 +24,7 @@ interface TicketPostModalProps {
   }) => void;
 }
 
-export function TicketPostModal({ open, onClose, onSubmit }: TicketPostModalProps) {
+export function TicketPostModal({ open, onClose, maxKnownPrice, onSubmit }: TicketPostModalProps) {
   const [type, setType] = React.useState<TicketPostType>(TPT.SELLING);
   const [quantity, setQuantity] = React.useState(1);
   const [faceValue, setFaceValue] = React.useState("");
@@ -45,12 +50,21 @@ export function TicketPostModal({ open, onClose, onSubmit }: TicketPostModalProp
       setError("数量必须大于0");
       return;
     }
+    if (qty > MAX_TICKET_QUANTITY) {
+      setError(`单帖最多 ${MAX_TICKET_QUANTITY} 张`);
+      return;
+    }
     const fv = faceValue ? Number(faceValue) : undefined;
     const pr = price ? Number(price) : undefined;
 
     if (isSelling) {
       if (!fv || fv <= 0) {
         setError("票面价必须大于0");
+        return;
+      }
+      // 票面价不能高于该 Show 已知最高票价；无票价数据时不猜，不校验
+      if (maxKnownPrice !== undefined && fv > maxKnownPrice) {
+        setError(`票面价不能高于该演出已知票价（¥${maxKnownPrice}）`);
         return;
       }
       if (pr !== undefined && pr > fv) {
@@ -99,12 +113,15 @@ export function TicketPostModal({ open, onClose, onSubmit }: TicketPostModalProp
           </button>
         </div>
 
-        {/* 数量 */}
+        {/* 数量（单帖最多 2 张） */}
         <div>
-          <label className="block text-sm text-text-secondary mb-1.5">数量</label>
+          <label className="block text-sm text-text-secondary mb-1.5">
+            数量（最多 {MAX_TICKET_QUANTITY} 张）
+          </label>
           <input
             type="number"
             min={1}
+            max={MAX_TICKET_QUANTITY}
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
             className="w-24 rounded-md border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:border-accent-lime"

@@ -7,7 +7,7 @@
  * 3. 提供 typed from() helpers 给各 API 模块复用
  *
  * 设计原则：
- * - 公共读数据（artists/venues/shows/show_artists/announcements）在 env 已配置时
+ * - 公共读数据（artists/venues/shows/show_artists）在 env 已配置时
  *   走真实 Supabase；未配置时由各 API 模块自行 fallback 到 mock（保证测试/本地开发）
  * - 不偷偷 fallback：在 dev 环境 console.warn 明确提示
  * - UI 不感知：API 层完全屏蔽 Supabase vs Mock 的差异
@@ -27,7 +27,7 @@ export function isSupabaseConfigured(): boolean {
 
 /**
  * 公共读数据源覆盖开关（开发/演示用）：
- * 设 NEXT_PUBLIC_DATA_SOURCE=mock 时，公共读数据（shows/artists/announcements）
+ * 设 NEXT_PUBLIC_DATA_SOURCE=mock 时，公共读数据（shows/artists）
  * 强制走本地 mock，便于验证 mock 测试数据（如周边城市兜底）。
  * 不影响 Auth / 用户行为数据（profile/follows/rooms/messages 等仍按原逻辑走 Supabase）。
  */
@@ -189,7 +189,6 @@ export const artistsFrom = makeTypedFrom("artists");
 export const venuesFrom = makeTypedFrom("venues");
 export const showsFrom = makeTypedFrom("shows");
 export const showArtistsFrom = makeTypedFrom("show_artists");
-export const announcementsFrom = makeTypedFrom("announcements");
 export const userArtistFollowsFrom = makeTypedFrom("user_artist_follows");
 export const showRoomsFrom = makeTypedFrom("show_rooms");
 export const roomMembershipsFrom = makeTypedFrom("room_memberships");
@@ -216,7 +215,6 @@ import type {
   Venue,
   Show,
   ShowArtist,
-  Announcement,
   ArtistExternalLinks,
   UserArtistFollow,
   ShowRoom,
@@ -239,7 +237,6 @@ import {
   ShowStatus,
   ShowTicketStatus,
   ArtistRole,
-  AnnouncementType,
   TicketPostType,
   TicketPostStatus,
   EventType,
@@ -256,7 +253,6 @@ type ArtistRow = Database["public"]["Tables"]["artists"]["Row"];
 type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
 type ShowRow = Database["public"]["Tables"]["shows"]["Row"];
 type ShowArtistRow = Database["public"]["Tables"]["show_artists"]["Row"];
-type AnnouncementRow = Database["public"]["Tables"]["announcements"]["Row"];
 type UserArtistFollowRow = Database["public"]["Tables"]["user_artist_follows"]["Row"];
 type ShowRoomRow = Database["public"]["Tables"]["show_rooms"]["Row"];
 type RoomMembershipRow = Database["public"]["Tables"]["room_memberships"]["Row"];
@@ -341,35 +337,6 @@ export function showArtistRowToShowArtist(row: ShowArtistRow): ShowArtist {
     artist_id: row.artist_id,
     role: row.role as ArtistRole,
     billing_order: row.billing_order,
-  };
-}
-
-/**
- * announcement DB row → 前端 Announcement
- *
- * DB 中 type 存储英文 key（ticket_sale/sold_out/...），但前端 AnnouncementType
- * enum 的值是中文（"开票"/"售罄"/...）。adapter 负责映射。
- */
-const ANNOUNCEMENT_TYPE_MAP: Record<string, AnnouncementType> = {
-  ticket_sale: AnnouncementType.TICKET_SALE,
-  sold_out: AnnouncementType.SOLD_OUT,
-  extra_show: AnnouncementType.EXTRA_SHOW,
-  venue_change: AnnouncementType.VENUE_CHANGE,
-  time_change: AnnouncementType.TIME_CHANGE,
-  postponed: AnnouncementType.POSTPONED,
-  cancelled: AnnouncementType.CANCELLED,
-  guest_change: AnnouncementType.GUEST_CHANGE,
-  organizer_notice: AnnouncementType.ORGANIZER_NOTICE,
-};
-
-export function announcementRowToAnnouncement(row: AnnouncementRow): Announcement {
-  return {
-    id: row.id,
-    show_id: row.show_id,
-    type: ANNOUNCEMENT_TYPE_MAP[row.type] ?? AnnouncementType.ORGANIZER_NOTICE,
-    title: row.title,
-    content: row.content ?? "",
-    created_at: row.created_at,
   };
 }
 

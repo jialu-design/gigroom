@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -32,6 +33,7 @@ interface BuddyTabProps {
 }
 
 export function BuddyTab({ showId, roomId, isMember, createLocked = false, replyLocked = false }: BuddyTabProps) {
+  const router = useRouter();
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const user = useUserStore((s) => s.user);
   const requireRoomMembership = useRequireRoomMembership();
@@ -157,23 +159,25 @@ export function BuddyTab({ showId, roomId, isMember, createLocked = false, reply
       ) : (
         <div className="space-y-3">
           {posts.map((post) => (
-            <BuddyPostCard
-              key={post.id}
-              post={post}
-              currentUserId={user?.id}
-              onReplyToggle={handleToggleReplies}
-              onDelete={setDeleteTarget}
-              onReport={() => requireAuth(() => setReportOpen(true))}
-            >
-              {expandedPost === post.id && commentsMap[post.id] && (
-                <PostReplies
-                  comments={commentsMap[post.id]}
-                  isLoggedIn={isLoggedIn}
-                  isMember={isMember && !replyLocked}
-                  onReply={(content) => handleReply(post.id, content)}
-                />
-              )}
-            </BuddyPostCard>
+            <div key={post.id} data-content-id={post.id}>
+              <BuddyPostCard
+                post={post}
+                currentUserId={user?.id}
+                onReplyToggle={handleToggleReplies}
+                onDelete={setDeleteTarget}
+                onReport={() => requireAuth(() => setReportOpen(true))}
+                onMessage={(userId) => router.push(`/u/${userId}`)}
+              >
+                {expandedPost === post.id && commentsMap[post.id] && (
+                  <PostReplies
+                    comments={commentsMap[post.id]}
+                    isLoggedIn={isLoggedIn}
+                    isMember={isMember && !replyLocked}
+                    onReply={(content) => handleReply(post.id, content)}
+                  />
+                )}
+              </BuddyPostCard>
+            </div>
           ))}
         </div>
       )}

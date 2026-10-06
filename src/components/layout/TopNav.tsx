@@ -72,7 +72,7 @@ export function TopNav({
 
   return (
     <header
-      className="hidden lg:flex sticky top-0 z-40 w-full border-b border-border bg-bg-primary/95 backdrop-blur"
+      className="hidden lg:flex sticky top-0 z-40 w-full border-b border-border bg-bg-primary"
       role="banner"
     >
       <div className="container-gigroom flex h-16 items-center justify-between gap-6">
@@ -80,9 +80,6 @@ export function TopNav({
         <Link href="/" className="shrink-0 flex items-center gap-2 group">
           <span className="font-condensed text-xl font-bold tracking-widest text-text-primary group-hover:text-accent-lime transition-colors">
             GIGROOM
-          </span>
-          <span className="text-text-tertiary text-sm tracking-wide hidden xl:inline">
-            声场
           </span>
         </Link>
 

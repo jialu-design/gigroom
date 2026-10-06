@@ -3,15 +3,14 @@
  *
  * 覆盖：
  * A. API contract 保持：getArtists/getArtistById/getFollowedArtists/getShows/
- *    getShowById/getShowsByArtist/getRecommendedShows/getAnnouncementsByShow/
- *    getAnnouncementById 签名不变
+ *    getShowById/getShowsByArtist/getRecommendedShows 签名不变
  * B. 公共读 API 层引用 Supabase（import 检查）
  * C. UI 不感知 Supabase（页面/组件不直接 import supabase client）
  * D. isSupabaseConfigured 标志正确：env 未配置时为 false
  * E. Mock 路径回归：env 未配置时 fallback 到 mock 数据，行为与 P4/P6 一致
  * F. Supabase 路径：mock supabase client，验证 API 真的调用 from().select() 等
  * G. Adapter：artistRowToArtist / venueRowToVenue / showRowToShow /
- *    showArtistRowToShowArtist / announcementRowToAnnouncement 类型映射正确
+ *    showArtistRowToShowArtist 类型映射正确
  * H. 用户行为未迁移：Follow / Going / Interested / Room / Posts / Notifications
  *    仍然通过 store / mock 路径，不走 Supabase
  * I. database.types.ts 覆盖 5 张公共表
@@ -137,18 +136,6 @@ function showArtistRow(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
-function announcementRow(overrides: Partial<Record<string, unknown>> = {}) {
-  return {
-    id: "ann-1",
-    show_id: "show-1",
-    type: "ticket_sale",
-    title: "预售已开票",
-    content: "预售票已开票",
-    created_at: "2026-07-01T10:00:00Z",
-    ...overrides,
-  };
-}
-
 // ============================================================
 // A. API contract 保持
 // ============================================================
@@ -166,12 +153,6 @@ describe("P10.2-A A — API contract 签名保持", () => {
     expect(typeof m.getShowById).toBe("function");
     expect(typeof m.getShowsByArtist).toBe("function");
     expect(typeof m.getRecommendedShows).toBe("function");
-  });
-
-  it("announcements.ts 导出 getAnnouncementsByShow / getAnnouncementById", async () => {
-    const m = await import("@/lib/api/announcements");
-    expect(typeof m.getAnnouncementsByShow).toBe("function");
-    expect(typeof m.getAnnouncementById).toBe("function");
   });
 
   it("getArtists 返回 PaginatedResult<Artist> 形状", async () => {
@@ -210,24 +191,16 @@ describe("P10.2-A B — API 层引用 Supabase", () => {
     expect(content).toContain("isPublicDataSupabaseEnabled");
   });
 
-  it("announcements.ts 引用 @/lib/supabase/publicData", () => {
-    const content = read("src/lib/api/announcements.ts");
-    expect(content).toContain('from "@/lib/supabase/publicData"');
-    expect(content).toContain("isPublicDataSupabaseEnabled");
-  });
-
-  it("publicData.ts 导出 5 个 typed from helpers + 5 个 adapter", () => {
+  it("publicData.ts 导出 4 个 typed from helpers + 4 个 adapter", () => {
     const content = read("src/lib/supabase/publicData.ts");
     expect(content).toContain("artistsFrom");
     expect(content).toContain("venuesFrom");
     expect(content).toContain("showsFrom");
     expect(content).toContain("showArtistsFrom");
-    expect(content).toContain("announcementsFrom");
     expect(content).toContain("artistRowToArtist");
     expect(content).toContain("venueRowToVenue");
     expect(content).toContain("showRowToShow");
     expect(content).toContain("showArtistRowToShowArtist");
-    expect(content).toContain("announcementRowToAnnouncement");
   });
 });
 
@@ -436,13 +409,6 @@ describe("P10.2-A E — Mock 路径回归（env 未配置）", () => {
     expect(shows.every((s) => s.status === ShowStatus.UPCOMING)).toBe(true);
   });
 
-  it("getAnnouncementsByShow('show-4') 返回非空列表", async () => {
-    const { getAnnouncementsByShow } = await import("@/lib/api/announcements");
-    const list = await getAnnouncementsByShow("show-4");
-    expect(list.length).toBeGreaterThan(0);
-    expect(list.every((a) => a.show_id === "show-4")).toBe(true);
-  });
-
   it("城市筛选仍生效（上海）", async () => {
     const { getShows } = await import("@/lib/api/shows");
     const result = await getShows({ city: "上海" });
@@ -523,28 +489,6 @@ describe("P10.2-A F — Supabase 路径（mock supabase client）", () => {
     expect(show!.id).toBe("show-4");
   });
 
-  it("getAnnouncementsByShow 调用 supabase.from('announcements')", async () => {
-    const fake = makeSupabaseFake({ data: [announcementRow()], error: null });
-    supabaseMock.current = fake;
-
-    const { getAnnouncementsByShow } = await import("@/lib/api/announcements");
-    const list = await getAnnouncementsByShow("show-1");
-    expect(fake.from).toHaveBeenCalledWith("announcements");
-    expect(list.length).toBe(1);
-    expect(list[0].title).toBe("预售已开票");
-  });
-
-  it("getAnnouncementById 调用 supabase.from('announcements').select('*').eq('id', id).single()", async () => {
-    const fake = makeSupabaseFake({ data: announcementRow(), error: null });
-    supabaseMock.current = fake;
-
-    const { getAnnouncementById } = await import("@/lib/api/announcements");
-    const ann = await getAnnouncementById("ann-1");
-    expect(ann).not.toBeNull();
-    expect(ann!.id).toBe("ann-1");
-    expect(fake.from).toHaveBeenCalledWith("announcements");
-  });
-
   it("Supabase 抛错时 artists fallback 到 mock", async () => {
     const fake = makeSupabaseFake({ data: null, error: new Error("network") });
     supabaseMock.current = fake;
@@ -607,43 +551,6 @@ describe("P10.2-A G — Adapter 类型映射", () => {
     expect(sa.role).toBe(ArtistRole.HEADLINER);
     expect(sa.billing_order).toBe(1);
   });
-
-  it("announcementRowToAnnouncement 正确映射 type: ticket_sale → 开票（中文 enum）", async () => {
-    const { announcementRowToAnnouncement } = await import("@/lib/supabase/publicData");
-    const { AnnouncementType } = await import("@/lib/types");
-    const ann = announcementRowToAnnouncement(announcementRow({ type: "ticket_sale" }));
-    expect(ann.type).toBe(AnnouncementType.TICKET_SALE);
-    expect(ann.type).toBe("开票"); // 中文 enum value
-  });
-
-  it("announcementRowToAnnouncement 映射 sold_out → 售罄", async () => {
-    const { announcementRowToAnnouncement } = await import("@/lib/supabase/publicData");
-    const { AnnouncementType } = await import("@/lib/types");
-    const ann = announcementRowToAnnouncement(announcementRow({ type: "sold_out" }));
-    expect(ann.type).toBe(AnnouncementType.SOLD_OUT);
-    expect(ann.type).toBe("售罄");
-  });
-
-  it("announcementRowToAnnouncement 映射 organizer_notice → 主办方公告", async () => {
-    const { announcementRowToAnnouncement } = await import("@/lib/supabase/publicData");
-    const { AnnouncementType } = await import("@/lib/types");
-    const ann = announcementRowToAnnouncement(announcementRow({ type: "organizer_notice" }));
-    expect(ann.type).toBe(AnnouncementType.ORGANIZER_NOTICE);
-    expect(ann.type).toBe("主办方公告");
-  });
-
-  it("announcementRowToAnnouncement 未知 type fallback 到 ORGANIZER_NOTICE", async () => {
-    const { announcementRowToAnnouncement } = await import("@/lib/supabase/publicData");
-    const { AnnouncementType } = await import("@/lib/types");
-    const ann = announcementRowToAnnouncement(announcementRow({ type: "unknown_type" }));
-    expect(ann.type).toBe(AnnouncementType.ORGANIZER_NOTICE);
-  });
-
-  it("announcementRowToAnnouncement content null → 空字符串", async () => {
-    const { announcementRowToAnnouncement } = await import("@/lib/supabase/publicData");
-    const ann = announcementRowToAnnouncement(announcementRow({ content: null }));
-    expect(ann.content).toBe("");
-  });
 });
 
 // ============================================================
@@ -698,27 +605,26 @@ describe("P10.2-A H — 用户行为未迁移（仍走 store / mock）", () => {
 // I. database.types.ts 覆盖 5 张公共表
 // ============================================================
 describe("P10.2-A I — database.types.ts 覆盖 5 张公共表", () => {
-  it("包含 profiles/artists/venues/shows/show_artists/announcements 6 张表", () => {
+  it("包含 profiles/artists/venues/shows/show_artists 5 张公共表", () => {
     const content = read("src/lib/supabase/database.types.ts");
     expect(content).toContain("profiles:");
     expect(content).toContain("artists:");
     expect(content).toContain("venues:");
     expect(content).toContain("shows:");
     expect(content).toContain("show_artists:");
-    expect(content).toContain("announcements:");
   });
 
   it("每张表都有 Row / Insert / Update / Relationships", () => {
     const content = read("src/lib/supabase/database.types.ts");
-    // 至少 6 张表 × 4 个字段 = 24 个匹配
+    // 至少 5 张公共表 × 4 个字段
     const rowMatches = content.match(/\bRow:\s*\{/g) ?? [];
-    expect(rowMatches.length).toBeGreaterThanOrEqual(6);
+    expect(rowMatches.length).toBeGreaterThanOrEqual(5);
     const insertMatches = content.match(/\bInsert:\s*\{/g) ?? [];
-    expect(insertMatches.length).toBeGreaterThanOrEqual(6);
+    expect(insertMatches.length).toBeGreaterThanOrEqual(5);
     const updateMatches = content.match(/\bUpdate:\s*\{/g) ?? [];
-    expect(updateMatches.length).toBeGreaterThanOrEqual(6);
+    expect(updateMatches.length).toBeGreaterThanOrEqual(5);
     const relMatches = content.match(/Relationships:\s*GenericRelationshipShape\[\]/g) ?? [];
-    expect(relMatches.length).toBeGreaterThanOrEqual(6);
+    expect(relMatches.length).toBeGreaterThanOrEqual(5);
   });
 
   it("shows 表 Row 含 is_demo / status / ticket_status / date_time", () => {
@@ -738,12 +644,5 @@ describe("P10.2-A I — database.types.ts 覆盖 5 张公共表", () => {
     const content = read("src/lib/supabase/database.types.ts");
     expect(content).toMatch(/role:\s*string/);
     expect(content).toMatch(/billing_order:\s*number/);
-  });
-
-  it("announcements 表 Row 含 type / title / content", () => {
-    const content = read("src/lib/supabase/database.types.ts");
-    expect(content).toMatch(/type:\s*string/);
-    expect(content).toMatch(/title:\s*string/);
-    expect(content).toMatch(/content:\s*string \| null/);
   });
 });

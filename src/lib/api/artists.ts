@@ -156,3 +156,36 @@ export async function getArtistLookupMap(): Promise<Map<string, Artist>> {
   warnSupabaseNotConfigured("artists");
   return new Map(mockArtistMap);
 }
+
+/**
+ * 获取有效 genre 标签列表（P1-5：从 Canonical Artist Registry 派生）。
+ *
+ * 规则：
+ * - 只统计 registry 中真实存在的 genres（UNVERIFIED Artist genres 为空，不产生标签）
+ * - 按拥有的乐队数量降序 → 同数量按字母序
+ * - 用于筛选 chips，替代硬编码 GENRES 常量，保证"有数据的 tag 才显示"
+ */
+export async function getAvailableGenres(): Promise<string[]> {
+  let all: Artist[];
+  if (isPublicDataSupabaseEnabled()) {
+    try {
+      all = await fetchArtistsFromSupabase();
+    } catch {
+      warnSupabaseNotConfigured("artists");
+      all = [...mockArtists];
+    }
+  } else {
+    warnSupabaseNotConfigured("artists");
+    all = [...mockArtists];
+  }
+
+  const counts = new Map<string, number>();
+  for (const a of all) {
+    for (const g of a.genres ?? []) {
+      counts.set(g, (counts.get(g) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))
+    .map(([g]) => g);
+}

@@ -3,7 +3,7 @@
  *
  * 本文件为 P10.1.5 临时 Database 类型入口，覆盖 P10.2-A 已接入的公共读表：
  * - profiles（P10.1）
- * - artists / venues / shows / show_artists / announcements（P10.2-A）
+ * - artists / venues / shows / show_artists（P10.2-A）
  *
  * 后续业务表迁移后，应使用官方生成类型替换：
  *
@@ -210,30 +210,6 @@ export type Database = {
         Update: {
           role?: string;
           billing_order?: number;
-        };
-        Relationships: GenericRelationshipShape[];
-      };
-
-      announcements: {
-        Row: {
-          id: string;
-          show_id: string;
-          type: string;
-          title: string;
-          content: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          show_id: string;
-          type: string;
-          title: string;
-          content?: string | null;
-        };
-        Update: {
-          type?: string;
-          title?: string;
-          content?: string | null;
         };
         Relationships: GenericRelationshipShape[];
       };

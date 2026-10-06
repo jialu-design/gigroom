@@ -26,6 +26,10 @@ import { getRoomByShow } from "@/lib/api/rooms";
 import { canSendMessage } from "@/lib/api/rooms";
 import { hydrateUsers, hydrateMessageUsers } from "@/lib/api/profile";
 import { trackEvent } from "@/lib/api/events";
+import {
+  generateDiscussionReplyNotification,
+  markNotificationsContentDeleted,
+} from "@/lib/api/notifications";
 import { resolveMockAuthor } from "@/lib/api/mockUser";
 import {
   discussionMessagesFrom,
@@ -222,6 +226,13 @@ export async function sendMessage(
   mockMessages.push(message);
   // P10.5: 记录用户行为事件（fire-and-forget）
   void trackEvent(userId, EventType.MESSAGE_SEND, TargetType.MESSAGE, message.id, { show_id: showId, room_id: roomId });
+  // P3: 回复通知（非自己回复自己时）
+  if (replyToId) {
+    const target = mockMessages.find((m) => m.id === replyToId);
+    if (target && target.user_id !== userId) {
+      void generateDiscussionReplyNotification(target.user_id, userId, showId, message.id);
+    }
+  }
   return delay(message);
 }
 
@@ -238,6 +249,8 @@ export async function deleteMessage(messageId: string, userId: string): Promise<
         .eq("id", messageId)
         .eq("user_id", userId);
       if (error) throw error;
+      // 消息删除 → 讨论回复通知失效
+      markNotificationsContentDeleted([messageId]);
       return;
     } catch {
       warnSupabaseNotConfigured("discussion_messages");
@@ -256,5 +269,7 @@ export async function deleteMessage(messageId: string, userId: string): Promise<
     throw new Error("Not the author");
   }
   mockMessages.splice(index, 1);
+  // 消息删除 → 讨论回复通知失效
+  markNotificationsContentDeleted([messageId]);
   return delay(undefined);
 }

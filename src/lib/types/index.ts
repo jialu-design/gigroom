@@ -38,8 +38,20 @@ export enum TicketPostType {
 /** 通知类型 */
 export enum NotificationType {
   NEW_SHOW = "new_show",
-  ANNOUNCEMENT = "announcement",
   ATTENDED_CHECK = "attended_check",
+  // P3 互动通知
+  DISCUSSION_REPLY = "discussion_reply",
+  BUDDY_REPLY = "buddy_reply",
+  BUDDY_INTERACTION = "buddy_interaction",
+  TICKET_FAVORITE = "ticket_favorite",
+  TICKET_MESSAGE = "ticket_message",
+  LIVE_INTERACTION = "live_interaction",
+}
+
+/** 通知关联内容删除后的展示状态 */
+export enum NotificationContentStatus {
+  NORMAL = "normal",
+  DELETED = "deleted",
 }
 
 /** 用户对演出的状态 */
@@ -54,19 +66,6 @@ export enum ArtistRole {
   HEADLINER = "headliner",
   SUPPORT = "support",
   GUEST = "guest",
-}
-
-/** 公告类型 */
-export enum AnnouncementType {
-  TICKET_SALE = "开票",
-  SOLD_OUT = "售罄",
-  EXTRA_SHOW = "加场",
-  VENUE_CHANGE = "场地变更",
-  TIME_CHANGE = "时间变更",
-  POSTPONED = "延期",
-  CANCELLED = "取消",
-  GUEST_CHANGE = "嘉宾变化",
-  ORGANIZER_NOTICE = "主办方公告",
 }
 
 /** 现场帖视频平台 */
@@ -110,8 +109,70 @@ export interface ArtistExternalLinks {
   netease?: string; // 网易云音乐
   bandcamp?: string;
   spotify?: string;
-  weibo?: string;
+  weibo?: string; // 微博
   instagram?: string;
+}
+
+// ============================================================================
+// Artist Editorial 内容资产层（Show Editorial Page 用）
+//
+// 独立于 Canonical Registry（artists.ts）：city/genres 仍以 registry 为唯一真源，
+// 本层只补长简介、官方来源、策展图片清单与 DEMO 乐迷印象。
+// 所有现场图片均为 DEMO reference，未获商用授权，禁止宣称官方/商用版权。
+// ============================================================================
+
+/** 官方/公开账号来源平台 */
+export type EditorialSourcePlatform =
+  | "official_site"
+  | "weibo"
+  | "instagram"
+  | "facebook"
+  | "x"
+  | "youtube"
+  | "netease";
+
+/** Artist 官方公开账号/页面（图片策展与简介事实的来源入口） */
+export interface ArtistEditorialSource {
+  platform: EditorialSourcePlatform;
+  account: string; // 展示名，如 "@ChineseFootball乐队"
+  url: string;
+  verified: boolean; // 仅在拿到平台认证 / 官网互链等证据时为 true
+  verified_note?: string; // 核实依据，如 "微博蓝V认证"
+}
+
+/** 策展图片（人工选图后入库；调研期 url 允许为 null，仅保留来源） */
+export interface EditorialPhoto {
+  id: string;
+  kind: "key_visual" | "live";
+  url: string | null; // 落地为 /public/images/artists/<id>/... 本地路径
+  source_url: string; // 原帖/原页面，必填
+  source_account: string;
+  photographer?: string; // 能确认时填写
+  is_official: boolean; // 官方账号/官方授权才为 true；来源不明一律 false
+  landscape: boolean; // 现场照优先横图
+  license_note: "DEMO reference，未获商用授权";
+  caption?: string;
+}
+
+/**
+ * 乐迷印象（全部为 DEMO 虚构内容）
+ * 只允许谈论 Artist 本身或其过往现场，禁止伪装成对尚未发生的 Show 的评价。
+ */
+export interface FanImpression {
+  id: string;
+  content: string;
+  is_demo: true; // 恒为 true，UI 必须据此展示 DEMO 标记
+  about: "artist" | "past_live";
+}
+
+/** Artist 内容资产包（1 个 Artist 对应 1 条） */
+export interface ArtistEditorial {
+  artist_id: string; // FK → Artist.id（Canonical Registry）
+  bio_long: string; // 80–150 字真实简介（事实需可溯源）
+  bio_sources: string[]; // 简介事实来源 URL
+  official_sources: ArtistEditorialSource[];
+  photos: EditorialPhoto[]; // 目标：1 张 key_visual + 3–6 张 live
+  fan_impressions: FanImpression[]; // 2–4 条 DEMO 短评
 }
 
 /** 场地 */
@@ -136,6 +197,7 @@ export interface Show {
   ticket_platform?: string; // 票务平台名称
   ticket_url?: string; // 购票链接
   ticket_status?: ShowTicketStatus; // 售票状态（coming_soon/on_sale/sold_out）
+  ticket_on_sale_at?: string; // 开票时间 ISO 8601（coming_soon 时展示倒计时）
   status: ShowStatus; // 演出生命周期状态（upcoming/ended/cancelled/postponed）
   is_demo?: boolean; // 标记为 DEMO/MOCK 数据，UI 可据此显示提示
   created_at: string;
@@ -201,16 +263,6 @@ export interface UserShowStatusRecord {
 // ========================
 // 社区内容类型
 // ========================
-
-/** 演出公告 */
-export interface Announcement {
-  id: string;
-  show_id: string;
-  type: AnnouncementType;
-  title: string;
-  content: string;
-  created_at: string;
-}
 
 /** 讨论消息 */
 export interface DiscussionMessage {
@@ -290,6 +342,29 @@ export interface LivePost {
   created_at: string;
   // 关联扩展
   user?: User;
+  // P5 互动扩展（由 API 派生）
+  like_count?: number;
+  comment_count?: number;
+  liked_by_me?: boolean;
+}
+
+/** 现场帖点赞（P5 mock） */
+export interface LivePostLike {
+  id: string;
+  live_post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+/** 现场帖评论（P5 mock） */
+export interface LivePostComment {
+  id: string;
+  live_post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  // 关联扩展
+  user?: User;
 }
 
 // ========================
@@ -302,13 +377,65 @@ export interface Notification {
   user_id: string;
   type: NotificationType;
   title: string;
+  /** 通知正文摘要 */
+  content_preview?: string;
   related_show_id?: string;
-  related_announcement_id?: string;
+  /** 关联内容 ID（帖子/评论/会话，用于深链与失效判定） */
+  related_content_id?: string;
+  /** 来源用户 ID */
+  from_user_id?: string;
+  /** 目标路由（含 ?tab= 深链） */
+  target_url?: string;
+  /** 关联内容已删除/失效 */
+  is_content_deleted?: boolean;
   is_read: boolean;
   created_at: string;
   // 关联扩展
   show?: Show;
-  announcement?: Announcement;
+}
+
+/** 交易会话（1v1，围绕某张出收票帖） */
+export interface TicketConversation {
+  id: string;
+  ticket_post_id: string;
+  show_id: string;
+  /** 发帖人（票主） */
+  owner_user_id: string;
+  /** 发起沟通的用户 */
+  requester_user_id: string;
+  created_at: string;
+  updated_at: string;
+  // 关联扩展
+  post?: TicketPost;
+  show?: Show;
+  requester?: User;
+  owner?: User;
+  /** 未读消息数（对当前用户） */
+  unread_count?: number;
+  /** 最后一条消息内容 */
+  last_message_preview?: string;
+}
+
+/** 交易消息 */
+export interface TicketMessage {
+  id: string;
+  conversation_id: string;
+  from_user_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+  // 关联扩展
+  from_user?: User;
+}
+
+/** 收藏出收票帖 */
+export interface TicketFavorite {
+  id: string;
+  ticket_post_id: string;
+  user_id: string;
+  created_at: string;
+  // 关联扩展
+  post?: TicketPost;
 }
 
 // ========================

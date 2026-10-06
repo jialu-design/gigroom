@@ -22,6 +22,10 @@ import { mockBuddyPosts } from "@/mocks/buddyPosts";
 import { userMap } from "@/mocks/users";
 import { hydrateUsers, hydrateUser } from "@/lib/api/profile";
 import { trackEvent } from "@/lib/api/events";
+import {
+  generateBuddyReplyNotification,
+  markNotificationsContentDeleted,
+} from "@/lib/api/notifications";
 import { resolveMockAuthor } from "@/lib/api/mockUser";
 import {
   buddyPostsFrom,
@@ -151,6 +155,8 @@ export async function deleteBuddyPost(
       if (error) throw error;
       // 同步删除关联评论（DB 由外键 CASCADE 自动处理，mock 路径需手动）
       comments = comments.filter((c) => c.buddy_post_id !== postId);
+      // 帖子删除 → 回复通知失效
+      markNotificationsContentDeleted([postId]);
       return;
     } catch {
       warnSupabaseNotConfigured("buddy_posts");
@@ -166,6 +172,8 @@ export async function deleteBuddyPost(
   if (post.user_id !== userId) throw new Error("Cannot delete others' posts");
   posts = posts.filter((p) => p.id !== postId);
   comments = comments.filter((c) => c.buddy_post_id !== postId);
+  // 帖子删除 → 回复通知失效
+  markNotificationsContentDeleted([postId]);
   return delay(undefined);
 }
 
@@ -262,6 +270,10 @@ export async function replyBuddyPost(
   if (post) post.comment_count = (post.comment_count ?? 0) + 1;
   // P10.5: 记录用户行为事件（fire-and-forget）
   void trackEvent(userId, EventType.COMMENT_CREATE, TargetType.COMMENT, comment.id, { post_id: postId, post_type: "buddy" });
+  // P3: 通知帖主（非自己回复时）
+  if (post && post.user_id !== userId) {
+    void generateBuddyReplyNotification(post.user_id, userId, post.show_id, postId);
+  }
   return delay(comment);
 }
 

@@ -1,6 +1,6 @@
 -- ============================================================================
 -- GigRoom seed.sql — 最小种子数据
--- P10.0: 仅准备少量公开数据（artists / venues / shows / show_artists / announcements）
+-- P10.0: 仅准备少量公开数据（artists / venues / shows / show_artists）
 -- 用户相关 seed 暂缓（需配合 Supabase Auth，P10.x 再处理）
 --
 -- 幂等：所有 INSERT 带 ON CONFLICT DO NOTHING，可安全重复执行。
@@ -52,12 +52,3 @@ INSERT INTO public.show_rooms (show_id) VALUES
   ('c0000000-0000-4000-8000-000000000002'),
   ('c0000000-0000-4000-8000-000000000003')
 ON CONFLICT (show_id) DO NOTHING;
-
--- ========================
--- Announcements
--- ========================
-INSERT INTO public.announcements (id, show_id, type, title, content, created_at) VALUES
-  ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'organizer_notice', '入场须知（DEMO）', '请提前30分钟入场，演出开始后停止入场。场内禁止录音录像。', '2026-07-20T10:00:00Z'),
-  ('d0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000002', 'ticket_sale', '预售已开票（DEMO）', '本场演出预售票已在秀动开票，售完即止。', '2026-07-01T10:00:00Z'),
-  ('d0000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000003', 'sold_out', '售罄通知（DEMO）', '本场演出全票种已售罄，感谢支持。', '2026-07-15T12:00:00Z')
-ON CONFLICT (id) DO NOTHING;

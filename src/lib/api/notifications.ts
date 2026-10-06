@@ -5,15 +5,14 @@
  * - 通知数据单一来源：useUserStore.notifications（Zustand persist）
  * - unreadCount = notifications.filter(n => !n.is_read).length（派生，不另存）
  * - 所有 mutation 委托 store actions，保证响应式 + 持久化
- * - 生成函数幂等：同 type + related_show_id + related_announcement_id 不重复
+ * - 生成函数幂等：同 type + related_show_id/related_content_id 不重复
  * - P10 替换为 Supabase 后，UI 层无需改动
  */
 import type { Notification } from "@/lib/types";
 import { NotificationType, UserShowStatus } from "@/lib/types";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import { showMap } from "@/mocks/shows";
-import { mockAnnouncements } from "@/mocks/announcements";
-import { mockShowRooms } from "@/mocks/shows";
+import { userMap } from "@/mocks/users";
 import { getShowLifecycle } from "@/lib/utils/showLifecycle";
 import { ArtistRole } from "@/lib/types";
 
@@ -55,6 +54,15 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
   return delay(undefined);
 }
 
+/**
+ * P4 收口：关联内容被删除时，批量把对应通知置为失效。
+ * 匹配 related_content_id（消息/帖子/会话 id）；失效通知同时清除未读，
+ * 避免用户永远无法消费一个指向已删除内容的未读红点。
+ */
+export function markNotificationsContentDeleted(contentIds: string[]): void {
+  useUserStore.getState().markNotificationsContentDeleted(contentIds);
+}
+
 // ========================
 // 通知生成函数（幂等）
 // ========================
@@ -92,55 +100,6 @@ export function generateNewShowNotification(
     type: NotificationType.NEW_SHOW,
     title: `${artistName} 在${show.city}有新演出`,
     related_show_id: showId,
-    is_read: false,
-    created_at: new Date().toISOString(),
-  };
-  useUserStore.getState().addNotification(notification);
-  return notification;
-}
-
-/** 生成 announcement 通知（going/interested/room member → 不重复） */
-export function generateAnnouncementNotification(
-  userId: string,
-  announcementId: string
-): Notification | null {
-  const state = useUserStore.getState();
-  if (!state.isLoggedIn || !state.user || state.user.id !== userId) return null;
-
-  const announcement = mockAnnouncements.find((a) => a.id === announcementId);
-  if (!announcement) return null;
-
-  const show = showMap.get(announcement.show_id);
-  if (!show) return null;
-
-  // 条件：用户 going / interested / 已加入该 show 的 Room
-  const showStatus = state.showStatuses[announcement.show_id];
-  const isGoing = showStatus === UserShowStatus.GOING;
-  const isInterested = showStatus === UserShowStatus.INTERESTED;
-  const room = mockShowRooms.find((r) => r.show_id === announcement.show_id);
-  const isRoomMember = room
-    ? state.roomMemberships.some((m) => m.room_id === room.id)
-    : false;
-
-  if (!isGoing && !isInterested && !isRoomMember) return null;
-
-  // 防重复：同 type + related_announcement_id 已存在则跳过
-  const exists = state.notifications.some(
-    (n) =>
-      n.type === NotificationType.ANNOUNCEMENT &&
-      n.related_announcement_id === announcementId
-  );
-  if (exists) return null;
-
-  const headliner = show.artists?.find((a) => a.role === ArtistRole.HEADLINER);
-  const artistName = headliner?.artist?.name ?? show.title ?? "演出";
-  const notification: Notification = {
-    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    user_id: userId,
-    type: NotificationType.ANNOUNCEMENT,
-    title: `${artistName} ${show.city}站发布新公告：${announcement.title}`,
-    related_show_id: announcement.show_id,
-    related_announcement_id: announcementId,
     is_read: false,
     created_at: new Date().toISOString(),
   };
@@ -204,6 +163,185 @@ export function checkAndGenerateAttendedNotifications(userId: string): Notificat
     if (notif) generated.push(notif);
   }
   return generated;
+}
+
+// ========================
+// P3 互动通知生成器（幂等）
+// ========================
+
+/** 生成 ticket_favorite 通知（有人收藏了你的出收票帖） */
+export function generateTicketFavoriteNotification(
+  recipientId: string,
+  postId: string,
+  fromUserId: string,
+  showId: string
+): Notification | null {
+  const state = useUserStore.getState();
+  if (!state.isLoggedIn || !state.user || state.user.id !== recipientId) return null;
+
+  const fromUser = userMap.get(fromUserId);
+  if (!fromUser) return null;
+
+  // 幂等：同 type + recipient + postId 已存在则跳过
+  const exists = state.notifications.some(
+    (n) =>
+      n.type === NotificationType.TICKET_FAVORITE &&
+      n.related_content_id === postId &&
+      n.from_user_id === fromUserId
+  );
+  if (exists) return null;
+
+  const notif: Notification = {
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: recipientId,
+    type: NotificationType.TICKET_FAVORITE,
+    title: `${fromUser.display_name} 收藏了你的出收票帖`,
+    related_show_id: showId,
+    related_content_id: postId,
+    from_user_id: fromUserId,
+    target_url: `/show/${showId}?tab=ticket#room`,
+    is_read: false,
+    created_at: new Date().toISOString(),
+  };
+  useUserStore.getState().addNotification(notif);
+  return notif;
+}
+
+/** 生成 ticket_message 通知（收到新交易消息） */
+export function generateTicketMessageNotification(
+  recipientId: string,
+  conversationId: string,
+  fromUserId: string,
+  showId: string
+): Notification | null {
+  const state = useUserStore.getState();
+  if (!state.isLoggedIn || !state.user || state.user.id !== recipientId) return null;
+
+  const fromUser = userMap.get(fromUserId);
+  if (!fromUser) return null;
+
+  // 幂等：同 type + conversationId（最近 30 秒内不重复轰炸）
+  const recently = state.notifications.some(
+    (n) =>
+      n.type === NotificationType.TICKET_MESSAGE &&
+      n.related_content_id === conversationId &&
+      new Date().getTime() - new Date(n.created_at).getTime() < 30_000
+  );
+  if (recently) return null;
+
+  const notif: Notification = {
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: recipientId,
+    type: NotificationType.TICKET_MESSAGE,
+    title: `${fromUser.display_name} 给你发了一条交易消息`,
+    related_show_id: showId,
+    related_content_id: conversationId,
+    from_user_id: fromUserId,
+    target_url: `/show/${showId}?tab=ticket#room`,
+    is_read: false,
+    created_at: new Date().toISOString(),
+  };
+  useUserStore.getState().addNotification(notif);
+  return notif;
+}
+
+/** 通用互动通知（讨论回复/搭子/现场），幂等按 related_content_id */
+function generateInteractionNotification(
+  recipientId: string,
+  fromUserId: string,
+  type: NotificationType,
+  title: string,
+  showId: string,
+  contentId: string,
+  tab: string
+): Notification | null {
+  const state = useUserStore.getState();
+  if (!state.isLoggedIn || !state.user || state.user.id !== recipientId) return null;
+  if (recipientId === fromUserId) return null;
+
+  // 幂等键：类型 + 内容 + 来源用户（不同用户对同一内容的点赞/评论分别通知，
+  // 同一用户对同一内容的重复触发只通知一次）
+  const exists = state.notifications.some(
+    (n) =>
+      n.type === type &&
+      n.related_content_id === contentId &&
+      n.from_user_id === fromUserId
+  );
+  if (exists) return null;
+
+  const notif: Notification = {
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    user_id: recipientId,
+    type,
+    title,
+    related_show_id: showId,
+    related_content_id: contentId,
+    from_user_id: fromUserId,
+    target_url: `/show/${showId}?tab=${tab}#room`,
+    is_read: false,
+    created_at: new Date().toISOString(),
+  };
+  useUserStore.getState().addNotification(notif);
+  return notif;
+}
+
+/** 讨论回复通知 */
+export function generateDiscussionReplyNotification(
+  recipientId: string,
+  fromUserId: string,
+  showId: string,
+  messageId: string
+): Notification | null {
+  const fromUser = userMap.get(fromUserId);
+  return generateInteractionNotification(
+    recipientId,
+    fromUserId,
+    NotificationType.DISCUSSION_REPLY,
+    `${fromUser?.display_name ?? "有人"} 回复了你的讨论`,
+    showId,
+    messageId,
+    "discussion"
+  );
+}
+
+/** 找搭子回复通知 */
+export function generateBuddyReplyNotification(
+  recipientId: string,
+  fromUserId: string,
+  showId: string,
+  postId: string
+): Notification | null {
+  const fromUser = userMap.get(fromUserId);
+  return generateInteractionNotification(
+    recipientId,
+    fromUserId,
+    NotificationType.BUDDY_REPLY,
+    `${fromUser?.display_name ?? "有人"} 回复了你的找搭子帖`,
+    showId,
+    postId,
+    "buddy"
+  );
+}
+
+/** 现场互动通知（点赞/评论） */
+export function generateLiveInteractionNotification(
+  recipientId: string,
+  fromUserId: string,
+  showId: string,
+  livePostId: string,
+  action: "like" | "comment"
+): Notification | null {
+  const fromUser = userMap.get(fromUserId);
+  const actionText = action === "like" ? "点赞" : "评论";
+  return generateInteractionNotification(
+    recipientId,
+    fromUserId,
+    NotificationType.LIVE_INTERACTION,
+    `${fromUser?.display_name ?? "有人"} ${actionText}了你的现场分享`,
+    showId,
+    livePostId,
+    "live"
+  );
 }
 
 // ========================

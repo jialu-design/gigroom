@@ -5,10 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, Users, ArrowRight, Calendar, MapPin, Home } from "lucide-react";
 import type { Show } from "@/lib/types";
-import { ArtistRole, UserShowStatus } from "@/lib/types";
+import { UserShowStatus } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { formatShowDateTime, getTicketStatusLabel } from "@/lib/utils/format";
+import { formatShowDateTime, getTicketStatusLabel, getShowDisplayTitle, isMultiArtistShow, getShowPosterFallback } from "@/lib/utils/format";
 
 interface FeaturedShowHeroProps {
   show: Show;
@@ -38,13 +38,9 @@ export function FeaturedShowHero({
   nearbyLabel,
   className,
 }: FeaturedShowHeroProps) {
-  const headliner = show.artists?.find(
-    (a) => a.role === ArtistRole.HEADLINER
-  );
-  const supportArtists = show.artists?.filter(
-    (a) => a.role !== ArtistRole.HEADLINER
-  );
-  const artistCn = headliner?.artist?.name ?? show.title ?? "未命名演出";
+  // 展示标题：拼盘场用「短名 × 短名」，单艺人用去括号注释的熟悉短名
+  const artistCn = getShowDisplayTitle(show);
+  const multiArtist = isMultiArtistShow(show);
   const venueName = show.venue?.name ?? "";
   const ticketLabel = getTicketStatusLabel(show.ticket_status);
 
@@ -81,13 +77,13 @@ export function FeaturedShowHero({
               </p>
             )}
 
-            {/* 中文名 */}
-            <h1 className="font-bold text-text-primary leading-[0.95] tracking-tight text-[52px] md:text-[60px] lg:text-[64px] mb-1">
+            {/* 中文名 / 拼盘组合标题 */}
+            <h1 className="font-bold text-text-primary leading-[0.95] tracking-tight text-[44px] md:text-[56px] lg:text-[60px] mb-1">
               {artistCn}
             </h1>
 
-            {/* 演出标题 / 副标题 */}
-            {show.title && show.title !== artistCn && (
+            {/* 演出标题：仅单艺人场保留巡演/专场副题；拼盘场标题已含双方，避免重复 */}
+            {show.title && !multiArtist && show.title !== artistCn && (
               <p className="text-text-secondary text-body md:text-lg mb-6 line-clamp-1">
                 {show.title}
               </p>
@@ -114,16 +110,6 @@ export function FeaturedShowHero({
                 </span>
               )}
             </div>
-
-            {/* 支持乐队（紧凑） */}
-            {supportArtists && supportArtists.length > 0 && (
-              <p className="text-text-tertiary text-xs mb-6 line-clamp-1">
-                {supportArtists
-                  .map((sa) => sa.artist?.name)
-                  .filter(Boolean)
-                  .join(" + ")}
-              </p>
-            )}
 
             {/* 主 CTA：两个并列按钮，加大字体、减小留白 */}
             <div className="flex flex-wrap items-center gap-3">
@@ -155,7 +141,7 @@ export function FeaturedShowHero({
                     : "border border-border text-text-secondary hover:text-text-primary hover:border-border-light"
                 )}
               >
-                {going ? "✓ 已要去" : "要去"}
+                {going ? "✓ 我要去" : "我要去"}
               </button>
               <button
                 type="button"
@@ -191,9 +177,9 @@ export function FeaturedShowHero({
               href={`/show/${show.id}`}
               className="block group relative aspect-[4/3] lg:aspect-[5/4] overflow-hidden rounded-sm bg-bg-secondary"
             >
-              {/* Hero 使用专门的横版演出摄影，卡片用竖版 show-{01..06}.jpg */}
+              {/* 优先用当前 Show 的海报，缺失再回退到按 id 分配的占位图 */}
               <Image
-                src="/images/shows/hero-01.jpg"
+                src={show.poster_url || getShowPosterFallback(show.id)}
                 alt={`${artistCn} 演出海报`}
                 fill
                 sizes="(max-width: 768px) 92vw, 60vw"

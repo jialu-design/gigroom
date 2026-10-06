@@ -33,7 +33,7 @@ export function BottomTabNav({
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-bg-primary/95 backdrop-blur"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-bg-primary"
       role="navigation"
       aria-label="移动端主导航"
     >

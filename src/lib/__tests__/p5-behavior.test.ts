@@ -1,5 +1,5 @@
 /**
- * P5 行为测试 - Show Room 四 Tab 核心逻辑
+ * P5 行为测试 - 观演小屋 四 Tab 核心逻辑
  * 覆盖 Discussion / Buddy / Ticket / Live / Room 权限 / 游客可读不可写
  *
  * 测试策略：

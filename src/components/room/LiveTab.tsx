@@ -10,7 +10,8 @@ import { useUserStore } from "@/lib/stores/useUserStore";
 import { useRequireRoomMembership } from "@/hooks/useRequireRoomMembership";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { getLivePosts, createLivePost, deleteLivePost } from "@/lib/api/posts/livePosts";
-import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+import { getLiveInteractionSummaries } from "@/lib/api/liveInteractions";
+import { getEffectiveShowState } from "@/lib/utils/showState";
 import type { Show, LivePost } from "@/lib/types";
 import { LivePostCard } from "./LivePostCard";
 import { LivePostModal } from "./LivePostModal";
@@ -22,6 +23,7 @@ interface LiveTabProps {
 }
 
 export function LiveTab({ show, roomId, isMember }: LiveTabProps) {
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const user = useUserStore((s) => s.user);
   const requireRoomMembership = useRequireRoomMembership();
   const requireAuth = useRequireAuth();
@@ -33,14 +35,28 @@ export function LiveTab({ show, roomId, isMember }: LiveTabProps) {
   const [deleteTarget, setDeleteTarget] = React.useState<LivePost | null>(null);
   const [reportOpen, setReportOpen] = React.useState(false);
 
-  const lifecycle = React.useMemo(() => getShowLifecycle(show), [show]);
+  // 统一状态口径：现场仅演出当天可发布；结束后只读保留现场记录
+  const state = React.useMemo(() => getEffectiveShowState(show), [show]);
+  const canPostLive = state.canPostLive;
 
   const load = React.useCallback(async () => {
     setLoading(true);
     const data = await getLivePosts(show.id);
-    setPosts(data);
+    // P5: 合并互动汇总（点赞数/评论数/我是否已赞）
+    const summaries = await getLiveInteractionSummaries(
+      data.map((p) => p.id),
+      user?.id
+    );
+    setPosts(
+      data.map((p) => ({
+        ...p,
+        like_count: summaries[p.id]?.likeCount ?? 0,
+        comment_count: summaries[p.id]?.commentCount ?? 0,
+        liked_by_me: summaries[p.id]?.likedByMe ?? false,
+      }))
+    );
     setLoading(false);
-  }, [show.id]);
+  }, [show.id, user?.id]);
 
   React.useEffect(() => {
     load();
@@ -51,8 +67,8 @@ export function LiveTab({ show, roomId, isMember }: LiveTabProps) {
     imageUrls: string[];
     videoUrl?: string;
   }) => {
-    // P7.3：时间锁优先（安全检查，UI 已通过 canPostLive 控制按钮显示）
-    if (!lifecycle.canPostLive) {
+    // 时间锁优先（安全检查，UI 已通过 canPostLive 控制按钮显示）
+    if (!canPostLive) {
       showToast("演出当天才能发布现场内容", "warning");
       return;
     }
@@ -93,21 +109,32 @@ export function LiveTab({ show, roomId, isMember }: LiveTabProps) {
 
   return (
     <div>
-      {/* 锁定状态提示 */}
-      {!lifecycle.canPostLive && (
+      {/* 锁定/预告提示：
+          - 取消/延期：关闭现场分享（canPostLive=false）
+          - 未到演出当天：预告（演出当天起可发，结束后仍可补发，历史永久保留）
+          - 当天/已结束：不显示提示，直接给发布入口 */}
+      {!canPostLive && (
         <div className="mb-4 rounded-sm border border-border bg-bg-secondary p-4 text-center">
           <Lock size={24} className="mx-auto text-text-tertiary mb-2" />
-          <p className="text-sm text-text-secondary">
-            演出当天可以在这里分享现场
-          </p>
-          <p className="text-xs text-text-tertiary mt-1">
-            演出结束后，这里会留下属于这一晚的现场记录
-          </p>
+          {state.bucket === "cancelled" ? (
+            <p className="text-sm text-text-secondary">演出已取消，无现场记录</p>
+          ) : state.bucket === "postponed" ? (
+            <p className="text-sm text-text-secondary">演出已延期，现场分享暂未开放</p>
+          ) : (
+            <>
+              <p className="text-sm text-text-secondary">
+                演出当天可以在这里分享现场
+              </p>
+              <p className="text-xs text-text-tertiary mt-1">
+                演出结束后，这里会留下属于这一晚的现场记录
+              </p>
+            </>
+          )}
         </div>
       )}
 
       {/* 发布按钮 */}
-      {lifecycle.canPostLive && (
+      {canPostLive && (
         <div className="mb-4">
           <Button
             variant="primary"
@@ -129,20 +156,25 @@ export function LiveTab({ show, roomId, isMember }: LiveTabProps) {
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-6 text-text-tertiary text-sm">
-          {lifecycle.canPostLive
+          {canPostLive
             ? "还没有现场记录，来第一个分享的人吧"
             : "暂无现场记录"}
         </div>
       ) : (
         <div className="space-y-3">
           {posts.map((post) => (
-            <LivePostCard
-              key={post.id}
-              post={post}
-              currentUserId={user?.id}
-              onDelete={setDeleteTarget}
-              onReport={() => requireAuth(() => setReportOpen(true))}
-            />
+            <div key={post.id} data-content-id={post.id}>
+              <LivePostCard
+                post={post}
+                showId={show.id}
+                roomId={roomId}
+                currentUserId={user?.id}
+                isMember={isMember}
+                isLoggedIn={isLoggedIn}
+                onDelete={setDeleteTarget}
+                onReport={() => requireAuth(() => setReportOpen(true))}
+              />
+            </div>
           ))}
         </div>
       )}

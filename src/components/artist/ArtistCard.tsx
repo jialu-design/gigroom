@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Artist } from "@/lib/types";
 import { Tag } from "@/components/ui/Badge";
+import { getGenreLabel } from "@/lib/constants";
 import { FollowButton } from "./FollowButton";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,7 @@ export function ArtistCard({ artist, className }: ArtistCardProps) {
   return (
     <div
       className={cn(
-        "group flex flex-col rounded-md border border-border bg-bg-secondary p-3 transition-colors hover:border-border-light",
+        "group flex flex-col rounded-md border border-border bg-bg-secondary p-4 transition-colors hover:border-border-light",
         className
       )}
     >
@@ -59,9 +60,9 @@ export function ArtistCard({ artist, className }: ArtistCardProps) {
         {/* 风格标签 */}
         {artist.genres.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {artist.genres.slice(0, 3).map((g) => (
+            {artist.genres.slice(0, 2).map((g) => (
               <Tag key={g} size="sm">
-                {g}
+                {getGenreLabel(g)}
               </Tag>
             ))}
           </div>

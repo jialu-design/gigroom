@@ -123,7 +123,7 @@ describe("P8 A. Profile 基础（未登录 & 已登录 & 统计）", () => {
     expect(user).not.toBeNull();
   });
 
-  it("去过的现场数 = showStatuses 中 status==='attended' 的数量", () => {
+  it("去过的演出数 = showStatuses 中 status==='attended' 的数量", () => {
     useUserStore.getState().mockLogin();
     const { showStatuses } = useUserStore.getState();
     const attendedCount = Object.values(showStatuses).filter(

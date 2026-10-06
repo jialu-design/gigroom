@@ -1,11 +1,12 @@
 /**
  * P4 行为测试 - 演出详情页逻辑验证
- * 验证状态独立、CTA 逻辑、游客可浏览、NotFound、公告关联等
+ * 验证状态独立、CTA 逻辑、游客可浏览、NotFound 等
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { getShowById } from "@/lib/api/shows";
 import { getRoomByShow, isRoomMember } from "@/lib/api/rooms";
-import { getAnnouncementsByShow } from "@/lib/api/announcements";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import { mockShows } from "@/mocks/shows";
 import type { Show } from "@/lib/types";
@@ -13,7 +14,6 @@ import {
   ShowStatus,
   ShowTicketStatus,
   UserShowStatus,
-  AnnouncementType,
   ArtistRole,
 } from "@/lib/types";
 
@@ -32,6 +32,17 @@ describe("动态路由读取", () => {
   it("不存在的演出 ID 应返回 null", async () => {
     const show = await getShowById("show-999");
     expect(show).toBeNull();
+  });
+
+  it("不存在的演出详情页走 server notFound()（真实 404，不渲染 200 空页）", () => {
+    // server 外壳：getShowById 为 null 时必须 notFound()
+    const page = readFileSync(
+      resolve(__dirname, "../../app/show/[id]/page.tsx"),
+      "utf-8"
+    );
+    expect(page).toContain("notFound()");
+    // 交互逻辑在 client 内核，server 外壳不直接渲染交互组件树以外的数据获取
+    expect(page).toContain("ShowEditorialClient");
   });
 
   it("演出应包含 venue 信息", async () => {
@@ -292,51 +303,12 @@ describe("状态独立性验证", () => {
 });
 
 // ========================
-// 7. Official Announcements 正确关联 Show
-// ========================
-describe("官方公告关联", () => {
-  it("应能获取 show-4 的公告", async () => {
-    const announcements = await getAnnouncementsByShow("show-4");
-    expect(announcements.length).toBeGreaterThan(0);
-    announcements.forEach((ann) => {
-      expect(ann.show_id).toBe("show-4");
-    });
-  });
-
-  it("公告应包含多种类型", async () => {
-    const show4Anns = await getAnnouncementsByShow("show-4");
-    const types = show4Anns.map((a) => a.type);
-    expect(types).toContain(AnnouncementType.TICKET_SALE);
-  });
-
-  it("公告按时间倒序排列", async () => {
-    const announcements = await getAnnouncementsByShow("show-4");
-    for (let i = 0; i < announcements.length - 1; i++) {
-      expect(announcements[i].created_at >= announcements[i + 1].created_at).toBe(
-        true
-      );
-    }
-  });
-
-  it("不存在公告的演出应返回空数组", async () => {
-    const announcements = await getAnnouncementsByShow("show-1");
-    // show-1 有 ann-7
-    expect(announcements.length).toBeGreaterThanOrEqual(0);
-  });
-});
-
-// ========================
-// 8. 游客可浏览验证
+// 7. 游客可浏览验证
 // ========================
 describe("游客可浏览", () => {
   it("游客可获取演出详情", async () => {
     const show = await getShowById("show-4");
     expect(show).not.toBeNull();
-  });
-
-  it("游客可获取公告", async () => {
-    const announcements = await getAnnouncementsByShow("show-4");
-    expect(announcements.length).toBeGreaterThan(0);
   });
 
   it("游客可获取房间信息", async () => {

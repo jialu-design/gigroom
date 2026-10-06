@@ -5,12 +5,36 @@
  * - 周边城市全部无演出时返回空数组（由 UI 回退空状态，不注入演示数据）
  * - mock 含 show-22~31 周边城市测试演出（杭州3/苏州2/南京2/天津1/深圳1/重庆1）
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getNearbyCities, NEARBY_CITY_MAP } from "@/lib/utils/cityNeighbors";
 import { getNearbyUpcomingShows } from "@/lib/api/shows";
 import { ShowStatus } from "@/lib/types";
 import { mockShows } from "@/mocks/shows";
 import { CITIES } from "@/lib/constants";
+
+// 固定"当前时间"：周边测试锚定 show-13（杭州 2026-09-25）为未来演出，
+// 同时保证 show-11（2026-09-15）已过被过滤。
+// 仅替换全局 Date 时钟（不用 vi.useFakeTimers，避免影响 Promise/timer 行为）。
+const RealDate = Date;
+const FIXED_NOW = new RealDate("2026-09-18T12:00:00+08:00").getTime();
+class FixedDate extends RealDate {
+  constructor(...args: unknown[]) {
+    if (args.length === 0) {
+      super(FIXED_NOW);
+    } else {
+      super(...(args as unknown as ConstructorParameters<typeof RealDate>));
+    }
+  }
+  static now(): number {
+    return FIXED_NOW;
+  }
+}
+beforeEach(() => {
+  (globalThis as { Date: unknown }).Date = FixedDate;
+});
+afterEach(() => {
+  (globalThis as { Date: unknown }).Date = RealDate;
+});
 
 describe("城市邻近关系（写死）", () => {
   it("核心城市的邻近城市及顺序符合需求（近 → 远）", () => {

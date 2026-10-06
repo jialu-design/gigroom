@@ -35,7 +35,7 @@ export default function NotificationsPage() {
   // 未登录态
   if (!isLoggedIn || !user) {
     return (
-      <main className="container-gigroom py-12">
+      <main className="container-gigroom py-8 md:py-12">
         <h1 className="text-h1 mb-8 text-text-primary">通知</h1>
         <EmptyState
           icon={<Bell size={48} />}
@@ -46,7 +46,7 @@ export default function NotificationsPage() {
             variant: "primary",
             onClick: openLoginModal,
           }}
-          className="border border-border rounded-md bg-bg-secondary py-16"
+          className="py-16"
         />
       </main>
     );
@@ -55,7 +55,7 @@ export default function NotificationsPage() {
   return (
     <main className="container-gigroom py-8 md:py-12">
       {/* 标题 + 全部已读 */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 max-w-3xl">
         <h1 className="text-h1 text-text-primary">通知</h1>
         {unreadCount > 0 && (
           <Button variant="ghost" size="sm" onClick={handleMarkAllRead}>
@@ -69,10 +69,10 @@ export default function NotificationsPage() {
           icon={<Bell size={48} />}
           title="暂时没有新通知"
           description="关注乐队和演出后，重要消息会出现在这里"
-          className="border border-border rounded-md bg-bg-secondary py-16"
+          className="py-16 max-w-3xl"
         />
       ) : (
-        <div className="rounded-md border border-border overflow-hidden bg-bg-primary">
+        <div className="rounded-md border border-border overflow-hidden bg-bg-primary max-w-3xl">
           {sortedNotifications.map((n) => (
             <NotificationItem key={n.id} notification={n} />
           ))}

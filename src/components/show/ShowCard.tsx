@@ -2,19 +2,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { Heart, Users } from "lucide-react";
 import type { Show } from "@/lib/types";
-import { ShowStatus, ArtistRole } from "@/lib/types";
+import { ArtistRole } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 import {
   formatShowDate,
   getTicketStatusLabel,
   getTicketStatusBadgeVariant,
-  getShowStatusLabel,
-  getShowStatusBadgeVariant,
-  isShowInactive,
   getShowPosterFallback,
 } from "@/lib/utils/format";
-import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+import { getEffectiveShowState } from "@/lib/utils/showState";
 
 interface ShowCardProps {
   show: Show;
@@ -37,21 +34,13 @@ export function ShowCard({ show, reason, className }: ShowCardProps) {
   );
   const venueName = show.venue?.name ?? "";
 
-  // 日期驱动生命周期：status 滞后但日期已过 → 按"已结束"显示，不再展示票务标签
-  const lifecycle = getShowLifecycle(show);
-  const statusOverride =
-    lifecycle.hasEnded || show.status !== ShowStatus.UPCOMING;
-  const effectiveStatus =
-    lifecycle.hasEnded && show.status === ShowStatus.UPCOMING
-      ? ShowStatus.ENDED
-      : show.status;
+  // 统一状态口径：status 滞后但日期已过 → 按"已结束"显示，不再展示票务标签
+  const state = getEffectiveShowState(show);
+  const statusOverride = state.bucket !== "upcoming";
   const ticketLabel = statusOverride
     ? null
     : getTicketStatusLabel(show.ticket_status);
   const ticketVariant = getTicketStatusBadgeVariant(show.ticket_status);
-  const inactive = isShowInactive(effectiveStatus);
-  const showStatusLabel = getShowStatusLabel(effectiveStatus);
-  const showStatusVariant = getShowStatusBadgeVariant(effectiveStatus);
 
   return (
     <Link href={`/show/${show.id}`} className={cn("group block", className)}>
@@ -64,7 +53,7 @@ export function ShowCard({ show, reason, className }: ShowCardProps) {
           sizes="(max-width: 768px) 92vw, (max-width: 1200px) 46vw, 30vw"
           className={cn(
             "object-cover transition-transform duration-300 group-hover:scale-[1.03]",
-            inactive && "opacity-50 grayscale"
+            state.isInactive && "opacity-50 grayscale"
           )}
         />
 
@@ -78,8 +67,8 @@ export function ShowCard({ show, reason, className }: ShowCardProps) {
         {/* 票务状态 badge（演出已结束/取消时改显生命周期状态） */}
         {statusOverride ? (
           <span className="absolute top-2 left-2">
-            <Badge variant={showStatusVariant} size="sm">
-              {showStatusLabel}
+            <Badge variant={state.badgeVariant} size="sm">
+              {state.label}
             </Badge>
           </span>
         ) : (
@@ -114,8 +103,8 @@ export function ShowCard({ show, reason, className }: ShowCardProps) {
         {/* 非正常生命周期状态 */}
         {statusOverride && (
           <div className="mt-1.5">
-            <Badge variant={showStatusVariant} size="sm">
-              {showStatusLabel}
+            <Badge variant={state.badgeVariant} size="sm">
+              {state.label}
             </Badge>
           </div>
         )}

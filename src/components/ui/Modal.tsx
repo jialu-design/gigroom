@@ -40,7 +40,7 @@ export function Modal({ open, onClose, title, children, className, forceMode }: 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end lg:items-center justify-center animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-fade-in"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
@@ -54,7 +54,7 @@ export function Modal({ open, onClose, title, children, className, forceMode }: 
         className={cn(
           "relative z-10 bg-bg-primary border border-border w-full",
           isSheet
-            ? "max-h-[85vh] rounded-t-lg border-b-0 animate-slide-up lg:rounded-lg lg:max-w-lg lg:animate-fade-in lg:border-b"
+            ? "max-h-[85vh] rounded-t-lg border-b-0 animate-slide-up md:rounded-lg md:max-w-lg md:animate-fade-in md:border-b"
             : "rounded-lg max-w-lg max-h-[85vh] animate-fade-in",
           className
         )}
@@ -62,7 +62,7 @@ export function Modal({ open, onClose, title, children, className, forceMode }: 
         {/* 顶部拖动条（仅sheet模式显示） */}
         <div
           className={cn(
-            "hidden lg:hidden mx-auto mt-3 w-10 h-1 rounded-full bg-border-strong",
+            "hidden md:hidden mx-auto mt-3 w-10 h-1 rounded-full bg-border-strong",
             isSheet && "block"
           )}
           aria-hidden

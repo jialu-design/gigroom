@@ -25,7 +25,7 @@ export const mockShowArtists: ShowArtist[] = [
   { id: "sa-4-1", show_id: "show-4", artist_id: "artist-1", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-1") },
   { id: "sa-4-2", show_id: "show-4", artist_id: "artist-3", role: ArtistRole.SUPPORT, billing_order: 2, artist: artistMap.get("artist-3") },
   // show-5
-  { id: "sa-5-1", show_id: "show-5", artist_id: "artist-7", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-7") },
+  { id: "sa-5-1", show_id: "show-5", artist_id: "artist-22", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-22") },
   // show-6
   { id: "sa-6-1", show_id: "show-6", artist_id: "artist-10", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-10") },
   // show-7
@@ -37,7 +37,7 @@ export const mockShowArtists: ShowArtist[] = [
   { id: "sa-9-1", show_id: "show-9", artist_id: "artist-8", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-8") },
   // show-10
   { id: "sa-10-1", show_id: "show-10", artist_id: "artist-11", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-11") },
-  { id: "sa-10-2", show_id: "show-10", artist_id: "artist-12", role: ArtistRole.SUPPORT, billing_order: 2, artist: artistMap.get("artist-12") },
+  { id: "sa-10-2", show_id: "show-10", artist_id: "artist-20", role: ArtistRole.SUPPORT, billing_order: 2, artist: artistMap.get("artist-20") },
   // show-11
   { id: "sa-11-1", show_id: "show-11", artist_id: "artist-15", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-15") },
   // show-12
@@ -79,7 +79,7 @@ export const mockShowArtists: ShowArtist[] = [
   { id: "sa-26-1", show_id: "show-26", artist_id: "artist-6", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-6") },
   // show-27 南京
   { id: "sa-27-1", show_id: "show-27", artist_id: "artist-11", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-11") },
-  { id: "sa-27-2", show_id: "show-27", artist_id: "artist-12", role: ArtistRole.SUPPORT, billing_order: 2, artist: artistMap.get("artist-12") },
+  { id: "sa-27-2", show_id: "show-27", artist_id: "artist-20", role: ArtistRole.SUPPORT, billing_order: 2, artist: artistMap.get("artist-20") },
   // show-28 南京
   { id: "sa-28-1", show_id: "show-28", artist_id: "artist-9", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-9") },
   // show-29 天津
@@ -88,6 +88,10 @@ export const mockShowArtists: ShowArtist[] = [
   { id: "sa-30-1", show_id: "show-30", artist_id: "artist-8", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-8") },
   // show-31 重庆
   { id: "sa-31-1", show_id: "show-31", artist_id: "artist-1", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-1") },
+  // show-32 武汉（演出当天样本：覆盖 RoomStatus.ACTIVE / canPostLive 走查）
+  { id: "sa-32-1", show_id: "show-32", artist_id: "artist-31", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-31") },
+  // show-33 成都
+  { id: "sa-33-1", show_id: "show-33", artist_id: "artist-24", role: ArtistRole.HEADLINER, billing_order: 1, artist: artistMap.get("artist-24") },
 ];
 
 // ========================
@@ -116,7 +120,7 @@ export const mockShows: Show[] = [
   // === 已结束演出（3场，用于测试过往演出和现场Tab）===
   {
     id: "show-1",
-    title: "Chinese Football x 柏林护士 联合专场（DEMO）",
+    title: "Chinese Football x 鼠鼠鼠 联合专场（DEMO）",
     venue_id: "venue-5",
     venue: venueMap.get("venue-5"),
     city: "武汉",
@@ -137,7 +141,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-2",
-    title: "海朋森 专场（DEMO）",
+    title: "开端 专场（DEMO）",
     venue_id: "venue-7",
     venue: venueMap.get("venue-7"),
     city: "成都",
@@ -158,7 +162,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-3",
-    title: "Carsick Cars x Snapline（DEMO）",
+    title: "草东没有派对 x mouse on the keys（DEMO）",
     venue_id: "venue-4",
     venue: venueMap.get("venue-4"),
     city: "北京",
@@ -202,7 +206,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-5",
-    title: "惘闻 北京专场（DEMO）",
+    title: "Dear Eloise 北京专场（DEMO）",
     venue_id: "venue-2",
     venue: venueMap.get("venue-2"),
     city: "北京",
@@ -223,7 +227,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-6",
-    title: "蛙池 广州专场（DEMO）",
+    title: "tricot 广州专场（DEMO）",
     venue_id: "venue-9",
     venue: venueMap.get("venue-9"),
     city: "广州",
@@ -244,7 +248,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-7",
-    title: "Shanghai Qiutian x DOC 联合专场（DEMO）",
+    title: "上海秋天 x 郁云 联合专场（DEMO）",
     venue_id: "venue-3",
     venue: venueMap.get("venue-3"),
     city: "上海",
@@ -265,7 +269,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-8",
-    title: "回春丹 成都专场（DEMO）",
+    title: "toe 成都专场（DEMO）",
     venue_id: "venue-7",
     venue: venueMap.get("venue-7"),
     city: "成都",
@@ -286,7 +290,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-9",
-    title: "万能青年旅店 北京专场（DEMO）",
+    title: "羊文学 北京专场（DEMO）",
     venue_id: "venue-2",
     venue: venueMap.get("venue-2"),
     city: "北京",
@@ -307,7 +311,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-10",
-    title: "脏手指 x 过失 上海朋克之夜（DEMO）",
+    title: "Slowdive x DIIV 上海Shoegaze之夜（DEMO）",
     venue_id: "venue-1",
     venue: venueMap.get("venue-1"),
     city: "上海",
@@ -328,7 +332,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-11",
-    title: "P.K.14 南京专场（DEMO）",
+    title: "落日飞车 南京专场（DEMO）",
     venue_id: "venue-10",
     venue: venueMap.get("venue-10"),
     city: "南京",
@@ -349,7 +353,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-12",
-    title: "柏林护士 x Default 武汉联合专场（DEMO）",
+    title: "鼠鼠鼠 x 缺省 武汉联合专场（DEMO）",
     venue_id: "venue-5",
     venue: venueMap.get("venue-5"),
     city: "武汉",
@@ -391,7 +395,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-14",
-    title: "海朋森 深圳专场（DEMO）",
+    title: "开端 深圳专场（DEMO）",
     venue_id: "venue-8",
     venue: venueMap.get("venue-8"),
     city: "深圳",
@@ -413,7 +417,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-15",
-    title: "惘闻 上海专场（DEMO）",
+    title: "RUBUR 上海专场（DEMO）",
     venue_id: "venue-3",
     venue: venueMap.get("venue-3"),
     city: "上海",
@@ -434,7 +438,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-16",
-    title: "Snapline 北京专场（DEMO）",
+    title: "mouse on the keys 北京专场（DEMO）",
     venue_id: "venue-4",
     venue: venueMap.get("venue-4"),
     city: "北京",
@@ -455,7 +459,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-17",
-    title: "DOC x Shanghai Qiutian 上海联合专场（DEMO）",
+    title: "郁云 x 上海秋天 上海联合专场（DEMO）",
     venue_id: "venue-1",
     venue: venueMap.get("venue-1"),
     city: "上海",
@@ -467,6 +471,7 @@ export const mockShows: Show[] = [
     ticket_platform: "秀动",
     ticket_url: "https://demo-ticket.example.com/show-17",
     ticket_status: ShowTicketStatus.COMING_SOON,
+    ticket_on_sale_at: "2026-10-05T12:00:00+08:00",
     status: ShowStatus.UPCOMING,
     created_at: "2026-08-12T00:00:00Z",
     is_demo: true,
@@ -476,7 +481,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-18",
-    title: "蛙池 x 回春丹 广州联合专场（DEMO）",
+    title: "tricot x toe 广州联合专场（DEMO）",
     venue_id: "venue-9",
     venue: venueMap.get("venue-9"),
     city: "广州",
@@ -497,7 +502,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-19",
-    title: "Carsick Cars 北京专场（DEMO - 已延期）",
+    title: "草东没有派对 北京专场（DEMO - 已延期）",
     venue_id: "venue-2",
     venue: venueMap.get("venue-2"),
     city: "北京",
@@ -517,7 +522,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-20",
-    title: "过失 x 脏手指 北京朋克之夜（DEMO）",
+    title: "American Football x Slowdive 北京Emo/Shoegaze之夜（DEMO）",
     venue_id: "venue-4",
     venue: venueMap.get("venue-4"),
     city: "北京",
@@ -560,7 +565,7 @@ export const mockShows: Show[] = [
   // （杭州3 / 苏州2 / 南京2 / 天津1 / 深圳1 / 重庆1），海报复用现有本地图片循环
   {
     id: "show-22",
-    title: "蛙池 杭州专场（DEMO）",
+    title: "tricot 杭州专场（DEMO）",
     venue_id: "venue-6",
     venue: venueMap.get("venue-6"),
     city: "杭州",
@@ -581,7 +586,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-23",
-    title: "柏林护士 x Default 杭州联合专场（DEMO）",
+    title: "鼠鼠鼠 x 缺省 杭州联合专场（DEMO）",
     venue_id: "venue-6",
     venue: venueMap.get("venue-6"),
     city: "杭州",
@@ -593,6 +598,7 @@ export const mockShows: Show[] = [
     ticket_platform: "正在现场",
     ticket_url: "https://demo-ticket.example.com/show-23",
     ticket_status: ShowTicketStatus.COMING_SOON,
+    ticket_on_sale_at: "2026-10-12T20:00:00+08:00",
     status: ShowStatus.UPCOMING,
     created_at: "2026-08-18T00:00:00Z",
     is_demo: true,
@@ -602,7 +608,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-24",
-    title: "Snapline 杭州专场（DEMO）",
+    title: "mouse on the keys 杭州专场（DEMO）",
     venue_id: "venue-6",
     venue: venueMap.get("venue-6"),
     city: "杭州",
@@ -623,7 +629,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-25",
-    title: "Shanghai Qiutian x DOC 苏州联合专场（DEMO）",
+    title: "上海秋天 x 郁云 苏州联合专场（DEMO）",
     venue_id: "venue-11",
     venue: venueMap.get("venue-11"),
     city: "苏州",
@@ -644,7 +650,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-26",
-    title: "海朋森 苏州专场（DEMO）",
+    title: "开端 苏州专场（DEMO）",
     venue_id: "venue-11",
     venue: venueMap.get("venue-11"),
     city: "苏州",
@@ -665,7 +671,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-27",
-    title: "脏手指 x 过失 南京朋克之夜（DEMO）",
+    title: "Slowdive x DIIV 南京Shoegaze之夜（DEMO）",
     venue_id: "venue-10",
     venue: venueMap.get("venue-10"),
     city: "南京",
@@ -686,7 +692,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-28",
-    title: "回春丹 南京专场（DEMO）",
+    title: "toe 南京专场（DEMO）",
     venue_id: "venue-10",
     venue: venueMap.get("venue-10"),
     city: "南京",
@@ -707,7 +713,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-29",
-    title: "Carsick Cars 天津专场（DEMO）",
+    title: "草东没有派对 天津专场（DEMO）",
     venue_id: "venue-12",
     venue: venueMap.get("venue-12"),
     city: "天津",
@@ -728,7 +734,7 @@ export const mockShows: Show[] = [
   },
   {
     id: "show-30",
-    title: "万能青年旅店 深圳专场（DEMO）",
+    title: "羊文学 深圳专场（DEMO）",
     venue_id: "venue-8",
     venue: venueMap.get("venue-8"),
     city: "深圳",
@@ -767,6 +773,55 @@ export const mockShows: Show[] = [
     interested_count: 189,
     going_count: 102,
     artists: mockShowArtists.filter((sa) => sa.show_id === "show-31"),
+  },
+
+  // === 场景覆盖补充演出（2场，show-32 ~ show-33）===
+  // show-32：武汉·演出当天（随系统日期=2026-10-01 时 isToday=true）
+  // → 覆盖"演出当天"生命周期：RoomStatus.ACTIVE、现场 Tab 可发帖（canPostLive）
+  // → 同时补齐武汉 upcoming=0 的发现页缺口
+  // show-33：成都 → 补齐成都 upcoming=0 的发现页缺口
+  // 两城均不在任何"周边城市邻近表"断言覆盖范围内，追加不影响 nearby 测试
+  {
+    id: "show-32",
+    title: "Tiniest 武汉专场（DEMO）",
+    venue_id: "venue-5",
+    venue: venueMap.get("venue-5"),
+    city: "武汉",
+    date_time: "2026-10-01T20:30:00+08:00",
+    poster_url: poster("show32wh"),
+    price_presale: 80,
+    price_door: 100,
+    price_text: "预售80 / 现场100（DEMO票价）",
+    ticket_platform: "秀动",
+    ticket_url: "https://demo-ticket.example.com/show-32",
+    ticket_status: ShowTicketStatus.ON_SALE,
+    status: ShowStatus.UPCOMING,
+    created_at: "2026-09-05T00:00:00Z",
+    is_demo: true,
+    interested_count: 96,
+    going_count: 54,
+    artists: mockShowArtists.filter((sa) => sa.show_id === "show-32"),
+  },
+  {
+    id: "show-33",
+    title: "Fayzz 成都专场（DEMO）",
+    venue_id: "venue-7",
+    venue: venueMap.get("venue-7"),
+    city: "成都",
+    date_time: "2026-10-17T20:30:00+08:00",
+    poster_url: poster("show33cd"),
+    price_presale: 100,
+    price_door: 120,
+    price_text: "预售100 / 现场120（DEMO票价）",
+    ticket_platform: "秀动",
+    ticket_url: "https://demo-ticket.example.com/show-33",
+    ticket_status: ShowTicketStatus.ON_SALE,
+    status: ShowStatus.UPCOMING,
+    created_at: "2026-09-08T00:00:00Z",
+    is_demo: true,
+    interested_count: 112,
+    going_count: 66,
+    artists: mockShowArtists.filter((sa) => sa.show_id === "show-33"),
   },
 ];
 

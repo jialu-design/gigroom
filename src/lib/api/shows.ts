@@ -13,7 +13,7 @@ import type { Show, ShowFilters, PaginatedResult, Venue, ShowArtist } from "@/li
 import { ShowStatus } from "@/lib/types";
 import { mockShows, showMap } from "@/mocks/shows";
 import { getNearbyCities } from "@/lib/utils/cityNeighbors";
-import { isShowDatePassed } from "@/lib/utils/showLifecycle";
+import { getShowBucket } from "@/lib/utils/showState";
 import {
   showsFrom,
   showRowToShow,
@@ -205,21 +205,17 @@ export async function getShows(filters?: ShowFilters): Promise<PaginatedResult<S
     result = result.filter((s) => s.city === filters.city);
   }
   if (filters?.status) {
-    if (filters.status === ShowStatus.UPCOMING) {
-      // 即将上演：状态 UPCOMING 且日期未过（状态字段滞后、日期已过的演出归入历史）
-      result = result.filter(
-        (s) => s.status === ShowStatus.UPCOMING && !isShowDatePassed(s)
-      );
-    } else if (filters.status === ShowStatus.ENDED) {
-      // 历史/已结束：状态 ENDED，或状态滞后（UPCOMING）但日期已过
-      result = result.filter(
-        (s) =>
-          s.status === ShowStatus.ENDED ||
-          (s.status === ShowStatus.UPCOMING && isShowDatePassed(s))
-      );
-    } else {
-      result = result.filter((s) => s.status === filters.status);
-    }
+    // 四态归一过滤：与首页/列表/详情共用 getShowBucket 唯一口径
+    const bucketMap: Partial<Record<ShowStatus, ReturnType<typeof getShowBucket>>> = {
+      [ShowStatus.UPCOMING]: "upcoming",
+      [ShowStatus.ENDED]: "ended",
+      [ShowStatus.POSTPONED]: "postponed",
+      [ShowStatus.CANCELLED]: "cancelled",
+    };
+    const bucket = bucketMap[filters.status];
+    result = bucket
+      ? result.filter((s) => getShowBucket(s) === bucket)
+      : result.filter((s) => s.status === filters.status);
   }
   if (filters?.ticket_status) {
     result = result.filter((s) => s.ticket_status === filters.ticket_status);
@@ -305,15 +301,43 @@ export async function getRecommendedShows(city?: string, limit = 10): Promise<Sh
     all = [...mockShows];
   }
 
-  // 即将上演 = 状态 UPCOMING 且日期未过（演出当天仍算 upcoming，当天开始后由详情页生命周期接管）
-  let result = all.filter(
-    (s) => s.status === ShowStatus.UPCOMING && !isShowDatePassed(s)
-  );
+  // 即将上演 = 统一口径的 upcoming 分组（演出当天仍算 upcoming；延期/取消/已过排除）
+  let result = all.filter((s) => getShowBucket(s) === "upcoming");
   if (city) {
     result = result.filter((s) => s.city === city);
   }
   result.sort((a, b) => a.date_time.localeCompare(b.date_time));
   return result.slice(0, limit);
+}
+
+/**
+ * 获取各城市 upcoming 演出数量（P0-4：城市数量唯一数据源）。
+ *
+ * 规则：
+ * - 与 getRecommendedShows/getShows 同一真值源与同一口径（getShowBucket upcoming）
+ * - 禁止 UI 层 hardcode 城市场次；"N场"数字必须来自本函数
+ * - 只返回数量 > 0 的城市
+ */
+export async function getUpcomingCountsByCity(): Promise<Record<string, number>> {
+  let all: Show[];
+  if (isPublicDataSupabaseEnabled()) {
+    try {
+      all = await fetchShowsFromSupabase();
+    } catch {
+      warnSupabaseNotConfigured("shows");
+      all = [...mockShows];
+    }
+  } else {
+    warnSupabaseNotConfigured("shows");
+    all = [...mockShows];
+  }
+
+  const counts: Record<string, number> = {};
+  for (const s of all) {
+    if (getShowBucket(s) !== "upcoming") continue;
+    counts[s.city] = (counts[s.city] ?? 0) + 1;
+  }
+  return counts;
 }
 
 /**

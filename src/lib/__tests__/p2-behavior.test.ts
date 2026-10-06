@@ -2,13 +2,37 @@
  * P2 行为测试 - 关键数据逻辑验证
  * 不验证类型编译（typecheck 已做），只验证实际运行时逻辑
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ShowStatus, ShowTicketStatus, TicketPostType, TicketPostStatus, UserShowStatus, ArtistRole } from "@/lib/types";
 import { getShows, getShowsByArtist, getRecommendedShows } from "@/lib/api/shows";
 import { getTicketPosts } from "@/lib/api/posts/ticketPosts";
 import { mockShows, mockShowArtists } from "@/mocks/shows";
 import { mockTicketPosts } from "@/mocks/ticketPosts";
 import { useUserStore } from "@/lib/stores/useUserStore";
+
+// 固定"当前时间"：mock 演出锚定在 2026 年 8-11 月（如 show-12 = 2026-09-20）。
+// 仅替换全局 Date 时钟（不用 vi.useFakeTimers，避免影响 Promise/timer 行为），
+// 使推荐/生命周期相关断言不随真实日期滚动而失效。
+const RealDate = Date;
+const FIXED_NOW = new RealDate("2026-09-18T12:00:00+08:00").getTime();
+class FixedDate extends RealDate {
+  constructor(...args: unknown[]) {
+    if (args.length === 0) {
+      super(FIXED_NOW);
+    } else {
+      super(...(args as unknown as ConstructorParameters<typeof RealDate>));
+    }
+  }
+  static now(): number {
+    return FIXED_NOW;
+  }
+}
+beforeEach(() => {
+  (globalThis as { Date: unknown }).Date = FixedDate;
+});
+afterEach(() => {
+  (globalThis as { Date: unknown }).Date = RealDate;
+});
 
 // ========================
 // 1. 演出城市筛选
@@ -58,7 +82,7 @@ describe("ShowArtist 乐队演出关联", () => {
 
   it("mockShowArtists 的 show_id 应与对应演出匹配", () => {
     const show1Artists = mockShowArtists.filter((sa) => sa.show_id === "show-1");
-    expect(show1Artists.length).toBe(2); // CF + 柏林护士
+    expect(show1Artists.length).toBe(2); // CF + 鼠鼠鼠
     expect(show1Artists.some((sa) => sa.artist_id === "artist-1")).toBe(true);
     expect(show1Artists.some((sa) => sa.artist_id === "artist-2")).toBe(true);
   });

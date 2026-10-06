@@ -3,7 +3,7 @@
  */
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { ShowStatus, ShowTicketStatus } from "@/lib/types";
+import { ArtistRole, ShowStatus, ShowTicketStatus, type Show } from "@/lib/types";
 import { SHOW_STATUS_LABEL, SHOW_TICKET_STATUS_LABEL } from "@/lib/constants";
 
 /**
@@ -14,6 +14,53 @@ export function getShowPosterFallback(showId: string): string {
   let n = 0;
   for (let i = 0; i < showId.length; i++) n = (n + showId.charCodeAt(i)) % 6;
   return `/images/shows/show-${String(n + 1).padStart(2, "0")}.jpg`;
+}
+
+/**
+ * 取用户最熟悉的展示短名：去掉官方名里的中英文括号注释
+ * 「郁云 (EmoCloud)」→「郁云」；「上海秋天（Shanghai Qiutian）」→「上海秋天」。
+ * 仅用于展示标题，不修改 Canonical Registry 中的官方全名。
+ */
+export function getArtistShortName(name: string): string {
+  const short = name
+    .replace(/[（(][^（）()]*[)）]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return short || name;
+}
+
+/**
+ * Show 展示标题（不改任何 Canonical 数据）：
+ * - 拼盘/双乐队：主艺人在前、嘉宾随后，短名用「 × 」连接，如「郁云 × 上海秋天」
+ * - 单艺人：短名
+ * - 无艺人关联：回退 show.title
+ */
+export function getShowDisplayTitle(show: Show): string {
+  const entries = show.artists ?? [];
+  const headliners = entries.filter((a) => a.role === ArtistRole.HEADLINER);
+  const supports = entries.filter((a) => a.role !== ArtistRole.HEADLINER);
+  const ordered = [...headliners, ...supports];
+
+  const names = [...new Set(
+    ordered
+      .map((a) => (a.artist ? getArtistShortName(a.artist.name) : null))
+      .filter((n): n is string => Boolean(n))
+  )];
+
+  if (names.length === 0) return show.title || "未命名演出";
+  if (names.length === 1) return names[0];
+  // 最多呈现 3 组，避免标题溢出
+  return names.slice(0, 3).join(" × ");
+}
+
+/** 是否为多艺人拼盘场（用于决定是否隐藏与组合标题重复的 show.title 副题） */
+export function isMultiArtistShow(show: Show): boolean {
+  const names = new Set(
+    (show.artists ?? [])
+      .map((a) => (a.artist ? getArtistShortName(a.artist.name) : null))
+      .filter(Boolean)
+  );
+  return names.size > 1;
 }
 
 /** Badge variant 字面量（与 Badge 组件的 variant 对齐） */

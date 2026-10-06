@@ -34,14 +34,15 @@ export function MessageList({
         </div>
       ) : (
         messages.map((msg) => (
-          <MessageItem
-            key={msg.id}
-            message={msg}
-            currentUserId={currentUserId}
-            onReply={onReply}
-            onDelete={onDelete}
-            onReport={onReport}
-          />
+          <div key={msg.id} data-content-id={msg.id}>
+            <MessageItem
+              message={msg}
+              currentUserId={currentUserId}
+              onReply={onReply}
+              onDelete={onDelete}
+              onReport={onReport}
+            />
+          </div>
         ))
       )}
       <div ref={bottomRef} />

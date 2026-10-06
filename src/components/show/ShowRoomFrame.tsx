@@ -5,13 +5,12 @@ import { LogIn } from "lucide-react";
 import { TabBar, TabItem } from "@/components/ui/TabBar";
 import { Button } from "@/components/ui/Button";
 import type { Show, ShowRoom } from "@/lib/types";
-import { ShowStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { DiscussionTab } from "@/components/room/DiscussionTab";
 import { BuddyTab } from "@/components/room/BuddyTab";
 import { TicketTab } from "@/components/room/TicketTab";
 import { LiveTab } from "@/components/room/LiveTab";
-import { getShowLifecycle } from "@/lib/utils/showLifecycle";
+import { getEffectiveShowState } from "@/lib/utils/showState";
 
 interface ShowRoomFrameProps {
   show: Show;
@@ -21,6 +20,8 @@ interface ShowRoomFrameProps {
   isRoomMember?: boolean;
   isLoggedIn?: boolean;
   onJoinRoom?: () => void;
+  /** P1-8: 深链 hl=<contentId>，定位并短暂高亮对应内容 */
+  highlightId?: string;
   className?: string;
 }
 
@@ -44,18 +45,47 @@ export function ShowRoomFrame({
   isRoomMember,
   isLoggedIn,
   onJoinRoom,
+  highlightId,
   className,
 }: ShowRoomFrameProps) {
   const [internalTab, setInternalTab] = React.useState(activeTab);
+  // 受控/非受控均需响应外部 activeTab 变化（?tab= 深链、浏览器前进后退）
+  React.useEffect(() => {
+    if (!onTabChange) setInternalTab(activeTab);
+  }, [activeTab, onTabChange]);
   const currentTab = onTabChange ? activeTab : internalTab;
-  // 各功能独立判定发布状态，不一刀切：
-  // 讨论/回复有 7 天宽限期；找搭子/票务结束即关；现场保持自有 canPostLive 规则
-  const lifecycle = React.useMemo(() => getShowLifecycle(show), [show]);
+  // 统一状态口径（唯一真相 utils/showState）：
+  // 各功能独立判定，不一刀切：讨论有 7 天宽限期；找搭子/票务结束即关；现场保持自有规则
+  const state = React.useMemo(() => getEffectiveShowState(show), [show]);
   // 演出已结束（含状态滞后、日期已过）或取消/延期：停止新用户加入，已加入成员仍可查看历史
-  const joinClosed =
-    lifecycle.hasEnded ||
-    show.status === ShowStatus.CANCELLED ||
-    show.status === ShowStatus.POSTPONED;
+  const joinClosed = !state.canJoinRoom;
+
+  const sectionRef = React.useRef<HTMLElement>(null);
+
+  // P1-8: 深链落点定位。内容为异步加载，轮询等待元素出现（最多 ~3s），
+  // 命中后滚动到视口中央并短暂高亮（.content-flash，2s）。
+  React.useEffect(() => {
+    if (!highlightId) return;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = () => {
+      tries += 1;
+      const el = sectionRef.current?.querySelector<HTMLElement>(
+        `[data-content-id="${CSS.escape(highlightId)}"]`
+      );
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("content-flash");
+        setTimeout(() => el.classList.remove("content-flash"), 2000);
+        return;
+      }
+      if (tries < 15) timer = setTimeout(poll, 200);
+    };
+    timer = setTimeout(poll, 200);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [highlightId, currentTab]);
 
   const handleTabChange = (key: string) => {
     if (onTabChange) {
@@ -66,7 +96,7 @@ export function ShowRoomFrame({
   };
 
   return (
-    <section id="room" className={cn("scroll-mt-20", className)}>
+    <section id="room" ref={sectionRef} className={cn("scroll-mt-20", className)}>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-bold text-text-primary tracking-tight flex items-center gap-2">
           <span className="w-1 h-4 bg-accent-lime rounded-sm inline-block" />
@@ -86,8 +116,8 @@ export function ShowRoomFrame({
         </div>
       </div>
 
-      {/* Tab 导航 */}
-      <div className="sticky top-0 z-10 bg-bg-primary/95 border-b border-border mb-4">
+      {/* Tab 导航：top-16 避开 TopNav（h-16 z-40） */}
+      <div className="sticky top-16 z-30 bg-bg-primary/95 border-b border-border mb-4">
         <TabBar
           tabs={ROOM_TABS}
           activeKey={currentTab}
@@ -95,13 +125,30 @@ export function ShowRoomFrame({
         />
       </div>
 
+      {/* 已加入成员 + 演出已结束：详情页直接浏览历史记录，无需跳转「我的演出」。
+          各 Tab 按各自门禁自动转只读（讨论 7 天宽限期、现场仍可补发为既定规则）。 */}
+      {isRoomMember && joinClosed && (
+        <div className="mb-3 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-center">
+          <p className="text-xs text-text-tertiary">
+            {state.bucket === "cancelled"
+              ? "演出已取消，以下为小屋历史记录"
+              : state.bucket === "postponed"
+                ? "演出已延期，新内容暂已关闭"
+                : "演出已结束，这里保留小屋的历史记录"}
+          </p>
+        </div>
+      )}
+
       {/* 未加入 Room 提示（已结束/取消/延期的演出不再提供加入入口） */}
       {!isRoomMember && (
         joinClosed ? (
           <div className="mb-3 rounded-sm border border-border bg-bg-secondary px-3 py-2 text-center">
             <p className="text-xs text-text-tertiary">
-              演出已结束，无法加入观演小屋；曾加入的成员可在「我的 → 小屋 →
-              过往观演小屋」查看历史记录
+              {state.bucket === "cancelled"
+                ? "演出已取消，小屋未开放加入"
+                : state.bucket === "postponed"
+                  ? "演出已延期，小屋暂不开放加入"
+                  : "演出已结束，无法加入观演小屋"}
             </p>
           </div>
         ) : (
@@ -116,24 +163,24 @@ export function ShowRoomFrame({
               className="mx-auto"
             >
               <LogIn size={14} />
-              {isLoggedIn ? "加入观演小屋" : "登录并加入小屋"}
+              {isLoggedIn ? "加入观演小屋" : "登录并加入观演小屋"}
             </Button>
           </div>
         )
       )}
 
-      {/* Tab 内容 */}
-      <div>
+      {/* Tab 内容（阅读区限宽 max-w-3xl） */}
+      <div className="max-w-3xl">
         {currentTab === "discussion" && (
-          <DiscussionTab showId={show.id} roomId={room?.id} isMember={!!isRoomMember} locked={!lifecycle.canDiscuss} />
+          <DiscussionTab showId={show.id} roomId={room?.id} isMember={!!isRoomMember} locked={!state.canDiscuss} />
         )}
         {currentTab === "buddy" && (
           <BuddyTab
             showId={show.id}
             roomId={room?.id}
             isMember={!!isRoomMember}
-            createLocked={!lifecycle.canPostBuddyTicket}
-            replyLocked={!lifecycle.canDiscuss}
+            createLocked={!state.canPostBuddyTicket}
+            replyLocked={!state.canDiscuss}
           />
         )}
         {currentTab === "ticket" && (
@@ -141,8 +188,14 @@ export function ShowRoomFrame({
             showId={show.id}
             roomId={room?.id}
             isMember={!!isRoomMember}
-            createLocked={!lifecycle.canPostBuddyTicket}
-            replyLocked={!lifecycle.canDiscuss}
+            createLocked={!state.canPostBuddyTicket}
+            replyLocked={!state.canDiscuss}
+            maxKnownPrice={(() => {
+              const prices = [show.price_presale, show.price_door].filter(
+                (p): p is number => typeof p === "number"
+              );
+              return prices.length > 0 ? Math.max(...prices) : undefined;
+            })()}
           />
         )}
         {currentTab === "live" && (

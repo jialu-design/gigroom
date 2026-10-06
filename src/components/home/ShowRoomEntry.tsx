@@ -25,25 +25,29 @@ interface ShowRoomEntryProps {
  * 数字 + 文字 + 细分割线布局，不做大卡片
  */
 export function ShowRoomEntry({
+  showId,
   title = "1000+ 人正在等你讨论演出、找搭子、出收票、分享现场。",
   className,
 }: ShowRoomEntryProps) {
   // 统计数字为全站固定 mock 总数据，不随 Featured Show 变化
+  // 各频道直达对应小屋 Tab（有 showId 时深链，否则回退到演出列表）
+  const roomHref = (tab: string) =>
+    showId ? `/show/${showId}?tab=${tab}#room` : "/shows";
   const channels: ChannelItem[] = [
-    { label: "讨论", count: "3.2k", icon: MessageSquare },
-    { label: "找搭子", count: "2.1k", icon: Users },
-    { label: "出收票", count: "680", icon: Ticket },
-    { label: "现场", count: "4.5k", icon: ImageIcon },
+    { label: "讨论", count: "3.2k", icon: MessageSquare, href: roomHref("discussion") },
+    { label: "找搭子", count: "2.1k", icon: Users, href: roomHref("buddy") },
+    { label: "出收票", count: "680", icon: Ticket, href: roomHref("ticket") },
+    { label: "现场", count: "4.5k", icon: ImageIcon, href: roomHref("live") },
   ];
 
   return (
     <section className={cn("border-b border-border", className)}>
-      <div className="container-gigroom py-10 md:py-12">
+      <div className="container-gigroom py-10 md:py-14">
         {/* 标题行 */}
         <div className="mb-6">
-          <p className="font-condensed text-xs tracking-[0.25em] text-accent-lime uppercase mb-3 flex items-center gap-1.5">
-            <Home size={11} strokeWidth={1.5} />
-            GIGROOM CABIN · 观演小屋
+          <p className="font-condensed text-sm md:text-base font-semibold tracking-[0.18em] text-accent-lime uppercase mb-3 flex items-center gap-1.5">
+            <Home size={13} strokeWidth={1.5} />
+            GIGROOM · 观演小屋
           </p>
           <p className="text-text-primary text-lg md:text-xl max-w-2xl leading-relaxed">
             {title}
@@ -56,7 +60,7 @@ export function ShowRoomEntry({
             {channels.map((ch) => (
               <Link
                 key={ch.label}
-                href="/shows"
+                href={ch.href}
                 className="group flex flex-col items-center gap-1.5 py-4 md:py-5 px-2 hover:bg-bg-secondary/40 transition-colors"
               >
                 <span className="font-condensed text-2xl md:text-3xl font-bold text-text-primary tracking-wider">
@@ -97,4 +101,5 @@ interface ChannelItem {
   label: string;
   count: string;
   icon: typeof MessageSquare;
+  href: string;
 }
