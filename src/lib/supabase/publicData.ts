@@ -52,6 +52,30 @@ export function isBehaviorSupabaseEnabled(): boolean {
   return isSupabaseConfigured() && !isPublicDataMockForced();
 }
 
+/**
+ * 关注关系是否启用 Supabase 持久化（独立于 isBehaviorSupabaseEnabled）。
+ *
+ * V1 HR Demo：真实 Auth 用户关注 Mock 乐队（字符串 ID）写入
+ * user_mock_artist_follows（artist_id text），不依赖 public.artists，
+ * 因此 NEXT_PUBLIC_DATA_SOURCE=mock（公共读/其他行为走本地 Mock）
+ * 不应关闭关注关系的云端持久化。
+ * 仅在完全未配置 Supabase（本地开发 / CI）时回退本地 store。
+ */
+export function isFollowPersistenceEnabled(): boolean {
+  return isSupabaseConfigured();
+}
+
+/**
+ * 判定 artistId 是否为仓库内 Mock 乐队 ID（如 "artist-1"）。
+ * 真实 Supabase artists 主键为 uuid；非 UUID 一律视为 Mock ID，
+ * 关注关系路由到 user_mock_artist_follows（artist_id text）。
+ */
+export function isMockArtistId(artistId: string): boolean {
+  return !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    artistId
+  );
+}
+
 /** dev 环境未走 Supabase 时给出明确提示（不静默 fallback） */
 export function warnSupabaseNotConfigured(domain: string): void {
   if (process.env.NODE_ENV === "development") {
@@ -190,6 +214,9 @@ export const venuesFrom = makeTypedFrom("venues");
 export const showsFrom = makeTypedFrom("shows");
 export const showArtistsFrom = makeTypedFrom("show_artists");
 export const userArtistFollowsFrom = makeTypedFrom("user_artist_follows");
+export const userMockArtistFollowsFrom = makeTypedFrom(
+  "user_mock_artist_follows"
+);
 export const showRoomsFrom = makeTypedFrom("show_rooms");
 export const roomMembershipsFrom = makeTypedFrom("room_memberships");
 export const discussionMessagesFrom = makeTypedFrom("discussion_messages");
@@ -254,6 +281,8 @@ type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
 type ShowRow = Database["public"]["Tables"]["shows"]["Row"];
 type ShowArtistRow = Database["public"]["Tables"]["show_artists"]["Row"];
 type UserArtistFollowRow = Database["public"]["Tables"]["user_artist_follows"]["Row"];
+type UserMockArtistFollowRow =
+  Database["public"]["Tables"]["user_mock_artist_follows"]["Row"];
 type ShowRoomRow = Database["public"]["Tables"]["show_rooms"]["Row"];
 type RoomMembershipRow = Database["public"]["Tables"]["room_memberships"]["Row"];
 type DiscussionMessageRow = Database["public"]["Tables"]["discussion_messages"]["Row"];
@@ -344,6 +373,21 @@ export function showArtistRowToShowArtist(row: ShowArtistRow): ShowArtist {
 export function followRowToFollow(row: UserArtistFollowRow): UserArtistFollow {
   return {
     id: row.id,
+    user_id: row.user_id,
+    artist_id: row.artist_id,
+    created_at: row.created_at,
+  };
+}
+
+/**
+ * user_mock_artist_follow DB row → 前端 UserArtistFollow。
+ * 该表无独立 id 列（复合主键 user_id+artist_id），合成稳定 id。
+ */
+export function mockFollowRowToFollow(
+  row: UserMockArtistFollowRow
+): UserArtistFollow {
+  return {
+    id: `${row.user_id}:${row.artist_id}`,
     user_id: row.user_id,
     artist_id: row.artist_id,
     created_at: row.created_at,

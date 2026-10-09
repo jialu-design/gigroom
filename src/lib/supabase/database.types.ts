@@ -234,6 +234,26 @@ export type Database = {
         Relationships: GenericRelationshipShape[];
       };
 
+      // ============ V1 HR Demo Mock 乐队关注云端持久化（artist_id 为 text） ============
+      user_mock_artist_follows: {
+        Row: {
+          user_id: string;
+          artist_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          artist_id: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          artist_id?: string;
+          created_at?: string;
+        };
+        Relationships: GenericRelationshipShape[];
+      };
+
       // ============ P10.2-D 观演小屋 ============
       show_rooms: {
         Row: {
